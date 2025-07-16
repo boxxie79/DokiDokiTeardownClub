@@ -5,6 +5,7 @@
 	<spawnpoint pos="0.0 1.0 0.0" rot="90.0 -180.0 0.0"/>
 	<script pos="0.0 5.5 0.0" file="MOD/main_game_ui.lua"/>
 	<script pos="2.7 5.5 0.0" file="MOD/luascripts/script_ch0.lua"/>
+	<script pos="5.9 5.5 0.0" file="MOD/definitions/sayori_image_definitions.lua"/>
 	<group name="playspace" pos="0.0 -1.5 0.0">
 		<voxbox pos="-2.5 0.0 -1.0" rot="-90.0 0.0 0.0" size="50 10 50" color="0 0 0"/>
 		<voxbox pos="-2.0 0.0 -2.5" rot="-90.0 -90.0 0.0" size="50 10 50" color="0 0 0"/>

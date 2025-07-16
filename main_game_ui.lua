@@ -1,10 +1,13 @@
 #include "/luascripts/script_ch0.lua"
+#include "/luascripts/script_chdebug.lua"
+#include "/definitions/sayori_image_definitions.lua"
 
 function init()
 	LoadedChapter = "0"
 	line = 1
 	currenttext = "NoTextLoaded"
 	speakingcharacter = "Character"
+	playing_music = "t1"
 	s_name = "Sayori"
   --[[if GetString("DDLC.MCNAME") ~= nil then
 		mc_name = GetString("DDLC.MCNAME")s
@@ -16,15 +19,16 @@ function init()
 	mc_name = GetString("DDLC.MCNAME")
 	DebugPrint("Good Morning Chat!")
 	DebugPrint("Doki Doki Literature Club v0.0.0-alpha")
-	background_image = "bg/residential"
-	character_on_screen = image_sayori_1
+	character_on_screen = nil
+	advancetext()
 end
 
 -- define game functions
-function playmusic(music)
-	local musicpath = "MOD/DDLC/audio.rpa/bgm/" .. music .. ".ogg"
-	UiSound(musicpath)
+function PlayMusicLoop(input)
+	local musicpath = "MOD/DDLC/audio.rpa/bgm/" .. input .. ".ogg"
+	UiSoundLoop(musicpath)
 end
+
 -- The Holy Grail Of VISUAL Novels
 function DrawImage(image, height)
   local w, h = UiGetImageSize(image)
@@ -33,9 +37,11 @@ function DrawImage(image, height)
   UiImage(image)
   UiPop()
 end
-function drawbackground(background_name)
-	DrawImage("MOD/DDLC/images.rpa/images/" .. background_name .. ".png", UiHeight())
+
+function drawbackground(input)
+	DrawImage("MOD/DDLC/images.rpa/images/" .. background_image .. ".png", UiHeight())
 end
+
 function renderCompositeImage(image, alignment)
 	UiPush()
 	UiResetNavigation()
@@ -55,37 +61,43 @@ function tableContains(table, key)
   return table[key] ~= nil
 end
 
--- image rendering commands over
--- script loading next
-
 -- setup chapter table
-  script_chfallback = {"FALLBACKSTRING"}
+	script_chfallback = {"FALLBACKSTRING"}
  
-  chapters = {}
+	chapters = {}
 
-  chapters["fallback"] = "luascripts/script_chfallback.lua"
-  chapters["debug"] = "luascripts/script_chdebug.lua"
-  chapters["0"] = script_ch0
-  chapters["1"] = "luascripts/script_ch1.lua"
+	chapters["fallback"] = script_chfallback
+	chapters["debug"] = script_chdebug
+	chapters["0"] = script_ch0
+	chapters["1"] = script_ch1
 
 -- setup character names
-  names = {}
-  names["s"] = "Sayori"
-  names["mc"] = GetString("DDLC.MCNAME")
-  names["monologue"] = "Internal Monologue"
+	names = {}
+	names["mc"] = GetString("DDLC.MCNAME")
+ 	names["monologue"] = "monologue"
+	names["s"] = "Sayori"
+ 	names["m"] = "Monika"
+	names["n"] = "Natsuki"
+ 	names["y"] = "Yuri"
+	names["ny"] = "Nat & Yuri"
 
---[[ function LoadChapter(chapterargument)
-	if chapters[chapterargument] then
-		DebugPrint("loading chapter " .. chapterargument)
-		-- loadfile("" .. chapters[chapterargument])
-		LoadedChapter = chapterargument
-		line = 1
-		currenttext = chapters[LoadedChapter][line]
-	else
-		DebugPrint("Chapter " .. chapterargument .. " not found.")
-		LoadedChapter = "fallback"
-	end
-end ]]
+--  set up fonts
+	fonts = {}
+	fonts["speech"] = "MOD/DDLC/fonts.rpa/gui/font/Aller_Rg.ttf"
+	fonts["name"] = "MOD/DDLC/fonts.rpa/gui/font/RifficFree-Bold.ttf"
+
+--	set up music
+	music = {}
+	music["t1"] = "1" -- Doki Doki Literature Club!
+	music["t2"] = "2" -- Ohayou Sayori!
+	music["t3"] = "3" -- Doki Doki Literature Club! (In Game Version)
+
+--	set up background images
+	backgrounds = {}
+	backgrounds["residential_day"] = "bg/residential"
+	backgrounds["class_day"] = "bg/class"
+	backgrounds["corridor"] = "bg/corridor"
+	backgrounds["club_day"] = "bg/club"
 
 -- text interpreting
 
@@ -97,20 +109,47 @@ function splitcommand(command)
 	return words
 end
 
-function interpretcommand()
-	local command = splitcommand(currenttext)
-  local key = 1
-	local words = {}
-	repeat until command[key] == nil
-	if string.find(currenttext, "show") then
-		DebugPrint("show")
-		local words = splitcommand(currenttext)
-		for i, word in ipairs(words) do
-			if word ~= "show" then
-				DebugPrint(word)
+function showcharacter(input)
+	local character = splitcommand(input)[1]
+	local pose = splitcommand(input)[2]
+	DebugPrint(character .. " " .. pose)
+	if character == "sayori" or character == "s" then
+		character_on_screen = image_sayori[pose]
+	elseif character == "monika" or character == "m" then
+		character_on_screen = image_monika[splitcommand(input)[3]]
+	elseif character == "natsuki" or character == "n" then
+		character_on_screen = image_natsuki[splitcommand(input)[3]]
+	elseif character == "yuri" or character == "y" then
+		character_on_screen = image_yuri[splitcommand(input)[3]]
+	else
+		DebugPrint("Unknown character: " .. character)
+	end
+end
 
-				break
-			end
+function interpretcommand(input)
+	local command = splitcommand(input)
+	if command[1] == "show" then
+		if command[3] == "zorder" then
+			return -- zorder not implemented yet
+		else
+			DebugPrint(command[1] .. " " .. command[2] .. " " .. command[3])
+			local character = command[2]
+			showcharacter(command[2] .. " " .. command[3])
+		end
+		elseif command[1] == "play" then
+		playing_music = music[command[3]]
+	elseif command[1] == "scene" then
+		character_on_screen = nil
+		if command[2] == "bg" then
+			background_image = backgrounds[command[3]]
+		else
+			DebugPrint("CG support not implemented")
+		end
+	elseif command[1] == "hide" then
+		character_on_screen = nil
+	else
+		if command[1] then
+		DebugPrint("Unknown command: " .. command[1])
 		end
 	end
 end
@@ -131,7 +170,6 @@ function getspeaker()
 end
 
 function striptext(texttostrip)
-	DebugPrint(texttostrip)
 	--  replace [player] with mc name
 	--  texttostrip = string.sub(texttostrip, "[player]", mc_name)
 	local first_quote = string.find(texttostrip, '"')
@@ -142,43 +180,28 @@ function striptext(texttostrip)
 	return texttostrip
 end
 
---[[
-function oldadvancetext(arg)
-	if arg == "1" then
-		line = line - 1
-	else
-		line = line + 1
-	end
-	if getspeaker() == "s" then
-		displaytext = '"' .. striptext(currenttext) .. '"'
-		speakingcharacter = s_name
-	elseif getspeaker() == "mc" then
-		displaytext = '"' .. striptext(currenttext) .. '"'
-		speakingcharacter = GetString("DDLC.MCNAME")
-	elseif getspeaker() == "monologue" then
-		displaytext = striptext(currenttext)
-		speakingcharacter = "internal monologue"
-	else
-		speakingcharacter = nil
-		interpretcommand()
-		DebugPrint(splitcommand(currenttext))
-		advancetext()
-	end
-end ]]
-
-function advancetext(arg)
-  if arg == "1" then
+function advancetext(argument)
+  if argument == "1" then
     line = line - 1
   else
     line = line + 1
   end
   currenttext = script_ch0[line]--chapters["0"][line]
-  if getspeaker() then
+  local splittext = splitcommand(currenttext)
+  if names[getspeaker()] ~= nil then
     speakingcharacter = names[getspeaker()]
+	if not string.find(splittext[1], '"') and not string.find (splittext[2], '"') then
+		showcharacter(splittext[1] .. " " .. splittext[2])
+		displaytext = striptext(currenttext)
+	elseif names[getspeaker()] == "monologue" then
+		displaytext = striptext(currenttext)
+	else
+		displaytext = '"' .. striptext(currenttext) .. '"'
+	end
+  else 
+	interpretcommand(currenttext)
+	advancetext()
   end
-end
-
-function tick()
 end
 
 --[[    ** **       *******                         **                **                 
@@ -200,11 +223,16 @@ function draw()
 	drawbackground(background_image)
 
 	UiMakeInteractive()
-	UiFont("MOD/fonts/riffic.ttf", 50)
+	UiFont(fonts["name"], 50)
+
+--	play music
+	PlayMusicLoop(playing_music)
 
 --  DRAW THE CHARACTERS BEFORE THE TEXTBOX BUT AFTER THE BACKGROUND
 
---	renderCompositeImage(character_on_screen, "center")
+	if character_on_screen ~= nil then
+		renderCompositeImage(character_on_screen, "center")
+	end
 
 --	Textbox
 	local TextboxW, TextboxH = UiGetImageSize("MOD/DDLC/images.rpa/gui/textbox.png")
@@ -221,14 +249,14 @@ function draw()
 
 --	draw character speech
 	UiTranslate(25, 60)
-	UiFont("MOD/fonts/aller.ttf", 50)
+	UiFont(fonts["speech"], 50)
   UiPush()
   UiWordWrap(TextboxW*1.5-30)
   UiTextOutline(0, 0, 0, 0.8, 0.4)
-	UiText(currenttext)
+	UiText(displaytext)
   UiPop()
 
-	UiFont("MOD/fonts/riffic.ttf", 50)
+	UiFont(fonts["name"], 50)
 --	Next button
 	UiTranslate(TextboxW*1.5-100, TextboxH*1.5-100)
 	if UiTextButton("Next") then
@@ -250,6 +278,7 @@ function draw()
 --	Debug HUD
 
 	UiFont("MOD/fonts/riffic.ttf", 50)
+	UiTextOutline(50, 0, 50, 1, 0.6)
 --[[UiPush()
 	UiTranslate(0, UiHeight()-50)
 	if UiTextButton("Clear Console") then
@@ -261,34 +290,17 @@ function draw()
 	UiPop() ]]
 	UiPush()
 	UiTranslate(50, 50)
-	UiText("Load Chapter")
-	UiTranslate(300, 0)
-	if UiTextButton("D") then
-		LoadChapter("debug")
-	end
-	UiTranslate(50, 0)
-	if UiTextButton("f") then
-		LoadChapter("fallback")
-	end
-	UiTranslate(50, 0)
-	if UiTextButton("0") then
-		LoadChapter("0")
-	end
-	UiTranslate(50, 0)
-	if UiTextButton("1") then
-		LoadChapter("1")
-	end
+	UiText(background_image .. " " .. playing_music)
 	UiPop()
 	UiTranslate(50, 100)
-	local mousex, mousey = UiGetMousePos()
-	UiText("Line " .. line .. " Chapter " .. LoadedChapter)-- .. " Speaker " .. getspeaker())
+	UiText("Line " .. line .. " Chapter " .. LoadedChapter .. " Speaker " .. getspeaker())
 	UiTranslate(0, 50)
+	UiPush()
+	UiFont(fonts["name"], 25)
+	UiWordWrap(1800)
 	UiText(currenttext)
+	UiPop()
 	UiTranslate(0,50)
-	if UiTextButton("play music") then
-		playmusic("2")
-	end
-  UiTranslate(0,50)
 	UiText(splitcommand(currenttext))
 end
 
@@ -305,7 +317,12 @@ end
 -- images sayori
 image_sayori_1 = {"sayori/1l.png", "sayori/1r.png", "sayori/a.png"}
 
+--image_sayori = {}
 
-image_sayori_4p = {"sayori/2l.png", "sayori/2r.png", "sayori/p.png"}
+--image_sayori["4p"] = {"sayori/2l.png", "sayori/2r.png", "sayori/p.png"}
 
-image_sayori = {image_sayori_1}
+image_monika = {}
+
+image_yuri = {}
+
+image_natsuki = {}
