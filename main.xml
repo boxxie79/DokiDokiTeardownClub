@@ -1,0 +1,17 @@
+<scene version="1.7.0" shadowVolume="200 50 200">
+	<environment template="sunny" skybox="BUILT-IN" skyboxtint="1.0 1.0 1.0" fogColor="1.0 1.0 1.0" sunColorTint="1.0 1.0 1.0"/>
+	<script file="main.lua" param0="disabletools=true"/>
+	<script file="sandbox.lua" param0="unlimited=false" param1="weather=false" param2="spawn=false"/>
+	<spawnpoint pos="0.0 1.0 0.0" rot="90.0 -180.0 0.0"/>
+	<script pos="0.0 5.5 0.0" file="MOD/main_game_ui.lua"/>
+	<script pos="2.7 5.5 0.0" file="MOD/luascripts/script_ch0.lua"/>
+	<group name="playspace" pos="0.0 -1.5 0.0">
+		<voxbox pos="-2.5 0.0 -1.0" rot="-90.0 0.0 0.0" size="50 10 50" color="0 0 0"/>
+		<voxbox pos="-2.0 0.0 -2.5" rot="-90.0 -90.0 0.0" size="50 10 50" color="0 0 0"/>
+		<voxbox pos="1.0 0.0 -2.5" rot="-90.0 -90.0 0.0" size="50 10 50" color="0 0 0"/>
+		<voxbox pos="-2.5 0.0 2.0" rot="-90.0 0.0 0.0" size="50 10 50" color="0 0 0"/>
+		<voxbox pos="-2.5 4.0 -2.5" size="50 10 50" color="0 0 0"/>
+		<voxbox pos="-2.5 0.0 -2.5" size="50 10 50" color="0 0 0"/>
+	</group>
+</scene>
+
