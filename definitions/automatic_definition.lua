@@ -26,16 +26,12 @@ function writeDefinitionCharacter(character)
     writeDefinitionChunk(character, "2", "1", "2")
     writeDefinitionChunk(character, "3", "2", "1")
     writeDefinitionChunk(character, "4", "2", "2")
-    writeDefinitionSmall(character, "5", "3")
-    writeDefinitionChunk(character, "1b", "1b", "1b")
-    writeDefinitionChunk(character, "2b", "1b", "2b")
-    writeDefinitionChunk(character, "3b", "2b", "1b")
-    writeDefinitionChunk(character, "4b", "2b", "2b")
+
 end
 
 writeDefinitionCharacter("sayori")
-writeDefinitionCharacter("monika")
 writeDefinitionCharacter("natsuki")
 writeDefinitionCharacter("yuri")
+writeDefinitionCharacter("monika")
 
 outputfile:close()

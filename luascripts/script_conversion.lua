@@ -19,12 +19,12 @@ end
 
 function RPY_TO_LUA(scriptnumber)
 
-outputfile = io.open("script_ch0.lua","w")
+outputfile = io.open("script_ch" .. scriptnumber .. ".lua","w")
 outputfile:write("--[[ converted DDLC script ]]\nscript_ch" .. scriptnumber .. " = {\n")
 
-outputfile = io.open("script_ch0.lua","a")
+outputfile = io.open("script_ch" .. scriptnumber .. ".lua","a")
 
-local output_table = file_to_table("script-ch0.rpy")
+local output_table = file_to_table("script-ch" .. scriptnumber .. ".rpy")
 for linenumber, linecontent in ipairs(output_table) do
     linecontent = linecontent:match("^%s*(.*)")
     outputfile:write("  ",--[[linenumber,]] "'", linecontent, "',\n")
@@ -36,4 +36,6 @@ outputfile:close()
 
 end
 
-RPY_TO_LUA(0)
+if arg[1] then
+    RPY_TO_LUA(arg[1])
+end
