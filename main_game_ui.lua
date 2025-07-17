@@ -1,6 +1,6 @@
 #include "/luascripts/script_ch0.lua"
 #include "/luascripts/script_chdebug.lua"
-#include "/definitions/sayori_image_definitions.lua"
+#include "/definitions/image_definitions.lua"
 
 function init()
 	LoadedChapter = "0"
@@ -53,7 +53,7 @@ function renderCompositeImage(image, alignment)
 	repeat
 		DrawImage("MOD/DDLC/images.rpa/images/" .. image[key], UiHeight())
 		key = key + 1
-	until key == 4
+	until image[key] == nil
 	UiPop()
 end
 
