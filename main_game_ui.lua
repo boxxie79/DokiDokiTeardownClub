@@ -1,15 +1,20 @@
 #include "/luascripts/script_ch0.lua"
 #include "/luascripts/script_ch1.lua"
 #include "/luascripts/script_chdebug.lua"
-#include "/definitions/image_definitions.lua"
+#include "/definitions/image_definitions2.lua"
 
 function init()
 	LoadedChapter = 0
 	line = 1
-	currenttext = "NoTextLoaded"
-	speakingcharacter = "Character"
+
+	SetInt("DDLC.chapter", LoadedChapter)
+	SetInt("DDLC.line", line)
+
+	currenttext = "fallback"
+	speakingcharacter = "character"
 	playing_music = "t1"
 	s_name = "Sayori"
+
   --[[if GetString("DDLC.MCNAME") ~= nil then
 		mc_name = GetString("DDLC.MCNAME")s
 	    else
@@ -17,12 +22,21 @@ function init()
 		SetString("DDLC.MCNAME", mc_name)
 	end ]]
 	SetString("DDLC.MCNAME", "MC")
-	mc_name = GetString("DDLC.MCNAME")
-	DebugPrint("Doki Doki Literature Club v0.0.0-alpha")
-	character_on_screen = nil
-	advancetext()
+	-- mc_name = GetString("DDLC.MCNAME")
 
+	sayori_score = 0
+	natsuki_score = 0
+	yuri_score = 0
+
+	character_on_screen = nil
+
+	in_novel = true
+	in_poem_game = false
 	in_menu = false
+
+	DebugPrint("startup complete")
+
+	advancetext()
 
 end
 
@@ -103,10 +117,23 @@ end
 
 --	set up background images
 	backgrounds = {}
+
 	backgrounds["residential_day"] = "bg/residential"
 	backgrounds["class_day"] = "bg/class"
 	backgrounds["corridor"] = "bg/corridor"
 	backgrounds["club_day"] = "bg/club"
+	backgrounds["splash"] = "bg/splash"
+	backgrounds["closet"] = "bg/closet"
+	backgrounds["bedroom"] = "bg/bedroom"
+	backgrounds["sayori_bedroom"] = "bg/sayori_bedroom"
+	backgrounds["house"] = "bg/house"
+	backgrounds["kitchen"] = "bg/kitchen"
+
+	backgrounds["notebook"] = "bg/notebook"
+	backgrounds["notebook-glitch"] = "bg/notebook-glitch"
+
+
+
 
 -- text interpreting
 
@@ -227,20 +254,20 @@ end
 
 function draw()
 
-if in_menu == false then
+--mark top corner
+UiPush()
+--	define center
+UiCenterH = UiHeight()/2
+UiCenterW = UiWidth()/2
+--	draw background
+drawbackground(background_image)
+if not InputDown("shift") then
+UiMakeInteractive()
+end
+
+
+if in_novel == true then
 	-- run the game
-
-	--mark top corner
-	UiPush()
-	--	define center
-	UiCenterH = UiHeight()/2
-	UiCenterW = UiWidth()/2
-	--	draw background
-	drawbackground(background_image)
-	if not InputDown("shift") then
-	UiMakeInteractive()
-	end
-
 	--	play music
 	PlayMusicLoop(playing_music)
 
@@ -273,7 +300,7 @@ if in_menu == false then
 		local textW, textH = UiText(speakingcharacter, false, 0)
 		UiTranslate(-textW/2, 0)
 		UiTextAlignment("middle center")
-		UiTextOutline(73, 0, 60, 1, 0.6)
+		UiTextOutline(0.73, 0.33, 0.60, 1, 0.6)
 		UiText(speakingcharacter)
 		UiPop()
 	end
@@ -292,14 +319,9 @@ if in_menu == false then
 	UiFont(fonts["name"], 50)
 	--	Next button
 	UiTranslate(TextboxW*1.5-100, TextboxH*1.5-100)
-	if UiTextButton("Next") then
+	if --[[UiTextButton("Next")]]InputPressed("Space") then
 		UiSound("MOD/DDLC/audio.rpa/gui/sfx/select.ogg")
 		advancetext()
-	end
-	--	previous (DEBUG) button
-	UiTranslate(120, 0)
-	if UiTextButton("Previous") then
-		advancetext("1")
 	end
 
 	UiPop()
@@ -312,7 +334,7 @@ if in_menu == false then
 	--	Debug HUD
 
 	UiFont("MOD/fonts/riffic.ttf", 50)
-	UiTextOutline(50, 0, 50, 1, 0.6)
+	UiTextOutline(0.73, 0.33, 0.60, 1, 0.6)
 	--[[UiPush()
 	UiTranslate(0, UiHeight()-50)
 	if UiTextButton("Clear Console") then
@@ -321,34 +343,15 @@ if in_menu == false then
 		i = i + 1
 		end
 	end
-	UiPop() ]]
-	if InputDown("ctrl") then
-		UiPush()
-		UiTranslate(50, 50)
-		UiText(background_image .. " " .. playing_music)
-		UiPop()
-		UiTranslate(50, 100)
-		UiText("Line " .. line .. " Chapter " .. LoadedChapter .. " Speaker " .. getspeaker())
-		UiTranslate(0, 50)
-		UiPush()
-		UiFont(fonts["name"], 25)
-		UiWordWrap(1800)
-		UiText(currenttext)
-		UiPop()
-		UiTranslate(0,50)
-		UiText(splitcommand(currenttext))
+	UiPop() ]]-- END OF GAME UI
+elseif in_poem_game == true then
+	-- poem game ui
 
-		if InputDown("uparrow") then
-			advancetext()
-		elseif InputDown("downarrow") then
-			advancetext("1")
-		elseif InputDown("leftarrow") then
-			line = 0
-			advancetext()
-		end
-	end
+	background_image = backgrounds["notebook"]
 
--- END OF GAME UI
+	-- debug font
+	UiFont("MOD/fonts/riffic.ttf", 50)
+	UiTextOutline(0, 0.5, 1, 1, 0.6)
 elseif in_menu == true then
 	-- menu ui
 
@@ -360,10 +363,56 @@ elseif in_menu == true then
 
 end
 
-if InputPressed("F2") then
-	-- toggle menu
-	in_menu = not in_menu
+-- DEBUGGING UI
+
+if not InputDown("ctrl") then
+	UiResetNavigation()
+	UiFont("MOD/fonts/riffic.ttf", 50)
+	UiTranslate(50, 50)
+	UiText("in_novel = " .. tostring(in_novel) .. " in_poem_game = " .. tostring(in_poem_game))
+	UiTranslate(0, 50)
+	UiText('bg = "' .. background_image .. '" music = "' .. playing_music .. '"')
+	UiTranslate(0, 50)
+	UiText("Line " .. line .. " Chapter " .. LoadedChapter .. " Speaker " .. getspeaker())
+	UiTranslate(0, 25)
+	UiPush()
+	UiFont(fonts["name"], 25)
+	UiWordWrap(1800)
+	UiText(currenttext)
+	UiPop()
+	UiTranslate(0, 50)
+	UiText("S = " .. sayori_score .. " N = " .. natsuki_score .. " Y = " .. yuri_score)
+	if InputDown("uparrow") then
+		advancetext()
+	elseif InputPressed("downarrow") then
+		advancetext("1")
+	elseif InputDown("leftarrow") then
+		line = 0
+		advancetext()
+	end
+
+	-- print savedata
+	UiResetNavigation()
+	UiTranslate(UiWidth()-500, 50)
+	UiText("Saved Data", true)
+	UiText("line " .. GetInt("DDLC.line") .. " chapter " .. GetInt("DDLC.chapter"), true)
+	UiText("S = " .. GetInt("DDLC.sayori_score") .. " N = " .. GetInt("DDLC.natsuki_score") .. " Y = " .. GetInt("DDLC.yuri_score"))
+else
+	DebugPrint("")
 end
 
 -- end of draw function
+end
+
+function tick()
+	-- this really should be done in the tick function
+	if InputPressed("F9") then
+		-- switch to game
+		in_poem_game = false
+		in_novel = true
+	elseif InputPressed("F10") then
+		-- switch to poem game
+		in_novel = false
+		in_poem_game = true
+	end
 end
