@@ -30,6 +30,12 @@ function init()
 
 	character_on_screen = nil
 
+	-- on screen | pose | position 
+	sayori_show = {false, "1", "center"}
+	yuri_show = {false, "1", "center"}
+	natsuki_show = {false, "1", "center"}
+	monika_show = {false, "1", "center"}
+
 	in_novel = true
 	in_poem_game = false
 	in_menu = false
@@ -61,7 +67,7 @@ function DrawImage(image, height)
 end
 
 function drawbackground(input)
-	DrawImage("MOD/DDLC/images.rpa/images/" .. background_image .. ".png", UiHeight())
+	DrawImage("MOD/DDLC/images.rpa/images/" .. background_image, UiHeight())
 end
 
 function renderCompositeImage(image, alignment)
@@ -71,6 +77,9 @@ function renderCompositeImage(image, alignment)
 	if alignment == "center" then
 		UiTranslate(UiWidth()/2, 0)
 		UiTranslate(-iw/2, 0)
+	else
+		UiTranslate(-480, 0)
+		UiTranslate(alignment, 0)
 	end
 	local key = 1
 	repeat
@@ -115,28 +124,9 @@ end
 	music["t2"] = "2" -- Ohayou Sayori!
 	music["t3"] = "3" -- Doki Doki Literature Club! (In Game Version)
 
---	set up background images
-	backgrounds = {}
-
-	backgrounds["residential_day"] = "bg/residential"
-	backgrounds["class_day"] = "bg/class"
-	backgrounds["corridor"] = "bg/corridor"
-	backgrounds["club_day"] = "bg/club"
-	backgrounds["splash"] = "bg/splash"
-	backgrounds["closet"] = "bg/closet"
-	backgrounds["bedroom"] = "bg/bedroom"
-	backgrounds["sayori_bedroom"] = "bg/sayori_bedroom"
-	backgrounds["house"] = "bg/house"
-	backgrounds["kitchen"] = "bg/kitchen"
-
-	backgrounds["notebook"] = "bg/notebook"
-	backgrounds["notebook-glitch"] = "bg/notebook-glitch"
-
-
-
-
 -- text interpreting
 
+-- copilot wrote this one
 function splitcommand(command)
 	local words = {}
 	for word in string.gmatch(command, "%S+") do
@@ -148,15 +138,19 @@ end
 function showcharacter(input)
 	local character = splitcommand(input)[1]
 	local pose = splitcommand(input)[2]
-	DebugPrint(character .. " " .. pose)
+	DebugPrint("showcharacter() " .. character .. " " .. pose)
 	if character == "sayori" or character == "s" then
-		character_on_screen = image_sayori[pose]
+		sayori_show[1] = true
+		sayori_show[2] = image_sayori[pose]
 	elseif character == "monika" or character == "m" then
-		character_on_screen = image_monika[pose]
+		monika_show[1] = true
+		monika_show[2] = image_monika[pose]
 	elseif character == "natsuki" or character == "n" then
-		character_on_screen = image_natsuki[pose]
+		natsuki_show[1] = true
+		natsuki_show[2] = image_natsuki[pose]
 	elseif character == "yuri" or character == "y" then
-		character_on_screen = image_yuri[pose]
+		yuri_show[1] = true
+		yuri_show[2] = image_yuri[pose]
 	else
 		DebugPrint("Unknown character: " .. character)
 	end
@@ -167,8 +161,10 @@ function interpretcommand(input)
 	if command[1] == "show" then
 		if command[3] == "zorder" then
 			return -- zorder not implemented yet
+		elseif command[3] == "behind" then
+			return -- behind not implemented yet
 		else
-			DebugPrint(command[1] .. " " .. command[2] .. " " .. command[3])
+			DebugPrint("interpretcommand() " .. command[1] .. " " .. command[2] .. " " .. command[3])
 			local character = command[2]
 			showcharacter(command[2] .. " " .. command[3])
 		end
@@ -176,13 +172,27 @@ function interpretcommand(input)
 		playing_music = music[command[3]]
 	elseif command[1] == "scene" then
 		character_on_screen = nil
+		sayori_show[1] = false
+		yuri_show[1] = false
+		natsuki_show[1] = false
+		monika_show[1] = false
 		if command[2] == "bg" then
-			background_image = backgrounds[command[3]]
+			background_image = image_bg[command[3]][1]
 		else
 			DebugPrint("CG support not implemented")
 		end
 	elseif command[1] == "hide" then
-		character_on_screen = nil
+		if command[2] == "sayori" then
+			sayori_show[1] = false
+		elseif command[2] == "natsuki" then
+			natsuki_show[1] = false
+		elseif command[2] == "yuri" then
+			yuri_show[1] = false
+		elseif command[2] == "monika" then
+			monika_show[1] = false
+		else
+			DebugPrint("hide command failed??")
+		end
 	elseif command[1] == "return" then
 		LoadedChapter = LoadedChapter + 1
 		line = 0
@@ -275,9 +285,20 @@ if in_novel == true then
 
 	UiPush()
 	UiResetNavigation()
-	if character_on_screen ~= nil then
-		renderCompositeImage(character_on_screen, "center")
+
+	if sayori_show[1] then
+		renderCompositeImage(sayori_show[2], 320)
 	end
+	if monika_show[1] then
+		renderCompositeImage(monika_show[2], 1400)
+	end
+	if natsuki_show[1] then
+		renderCompositeImage(natsuki_show[2], 960)
+	end
+	if yuri_show[1] then
+		renderCompositeImage(yuri_show[2], 640)
+	end
+
 	UiPop()
 
 	--	Textbox
