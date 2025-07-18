@@ -5,4 +5,6 @@ This project is in early alpha and is in no way considered playable. If you want
 This is a Doki Doki Literature Club fan game that is not affiliated with Team Salvato. It is not designed to be a replacement for the original game, simply an exploration of the limits of Teardown's modding capabilities. It is designed to be played only after the official game has been completed. You can download Doki Doki Literature Club at: http://ddlc.moe
 
 
-https://github.com/user-attachments/assets/fb0bf150-384f-46d4-a024-ce0669b9a89c
+
+https://github.com/user-attachments/assets/64aa17ef-0bee-4cc5-b562-2dd9de5e0716
+
