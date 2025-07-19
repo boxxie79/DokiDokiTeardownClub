@@ -160,8 +160,7 @@ script_ch1 = {
   '',
   'return',
   '',
-  }
-script_ch1_end = {
+  '',
   'label ch1_end:',
   'stop music fadeout 1.0',
   'scene bg club_day',
@@ -418,9 +417,7 @@ script_ch1_end = {
   '"Yeah..."',
   '"Let\'s do this!"',
   'return',
-  ''
-  }
-script_ch1_end_natsuki = {
+  '',
   'label ch1_end_natsuki:',
   '$ ch1_choice = "natsuki"',
   'stop music fadeout 1.0',
@@ -563,9 +560,7 @@ script_ch1_end_natsuki = {
   '"But in the end..."',
   '"...I guess it\'s been worth it so far."',
   'return',
-  ''
-  }
-script_ch1_end_yuri = {
+  '',
   'label ch1_end_yuri:',
   '$ ch1_choice = "yuri"',
   'stop music fadeout 1.0',
@@ -684,9 +679,7 @@ script_ch1_end_yuri = {
   'mc "Make enough for more than one person, okay?"',
   'y "Y-Yeah."',
   'return',
-  ''
-  }
-script_ch1_end_sayori = {
+  '',
   'label ch1_end_sayori:',
   '$ ch1_choice = "sayori"',
   'mc "N-Natsuki..."',

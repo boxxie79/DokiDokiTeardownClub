@@ -7,48 +7,90 @@ function init()
 	LoadedChapter = 0
 	line = 1
 
-	SetInt("DDLC.chapter", LoadedChapter)
-	SetInt("DDLC.line", line)
-
 	currenttext = "fallback"
 	speakingcharacter = "character"
 	playing_music = "t1"
 	s_name = "Sayori"
 
-  --[[if GetString("DDLC.MCNAME") ~= nil then
-		mc_name = GetString("DDLC.MCNAME")s
+  --[[if GetString("savegame.mod.MCNAME") ~= nil then
+		mc_name = GetString("savegame.mod.MCNAME")s
 	    else
 		mc_name = "MC"
-		SetString("DDLC.MCNAME", mc_name)
+		SetString("savegame.mod.MCNAME", mc_name)
 	end ]]
-	SetString("DDLC.MCNAME", "MC")
-	-- mc_name = GetString("DDLC.MCNAME")
+	SetString("savegame.mod.mcname", "MC")
+	-- mc_name = GetString("savegame.mod.MCNAME")
 
 	sayori_score = 0
 	natsuki_score = 0
 	yuri_score = 0
+	
+	background_image = "../gui/menu_bg.png"
+	
+	characters_on_screen = {}
 
-	character_on_screen = nil
-
-	-- on screen | pose | position 
-	sayori_show = {false, "1", "center"}
-	yuri_show = {false, "1", "center"}
-	natsuki_show = {false, "1", "center"}
-	monika_show = {false, "1", "center"}
+	-- pose | position
+	-- if pose is nil, don't show 
+	sayori_show = {nil, "center"}
+	yuri_show = {nil, "center"}
+	natsuki_show = {nil, "center"}
+	monika_show = {nil, "center"}
 
 	in_novel = true
 	in_poem_game = false
 	in_menu = false
 
 	DebugPrint("startup complete")
-
-	advancetext()
-
 end
 
-	-- only used for Teardown pause background
 function tick()
 	DrawSprite(LoadSprite("MOD/DDLC/images.rpa/gui/menu_bg.png"), Transform(Vec(0, 1, 0)), 5, 5)
+	if InputPressed("F9") then
+		-- switch to game
+		in_menu = false
+		in_poem_game = false
+		in_novel = true
+	elseif InputPressed("F10") then
+		-- switch to poem game
+		in_menu = false
+		in_novel = false
+		in_poem_game = true
+	elseif InputPressed("F11") then
+		-- switch to menu (soon to be default state ok?)
+		in_novel = false
+		in_poem_game = false
+		in_menu = true
+	end
+end
+
+function SaveGame()
+	-- basics
+	SetInt("savegame.mod.chapter", LoadedChapter)
+	SetInt("savegame.mod.line", line)
+	-- affection scores
+	SetInt("savegame.mod.sayori.score", sayori_score)
+	SetInt("savegame.mod.yuri.score", yuri_score)
+	SetInt("savegame.mod.natsuki.score", natsuki_score)
+	-- visuals
+	SetString("savegame.mod.visuals.scene", background_image)
+
+	DebugPrint("game saved")
+end
+
+function LoadGame()
+    -- basics
+	LoadedChapter = GetInt("savegame.mod.chapter")
+	line = GetInt("savegame.mod.line")-1
+	-- affection scores
+	sayori_score = GetInt("savegame.mod.sayori.score")
+	yuri_score = GetInt("savegame.mod.yuri.score")
+	natsuki_score = GetInt("savegame.mod.natsuki.score")
+	-- visual
+	background_image = GetString("savegame.mod.visuals.scene")
+	-- trigger textbox update
+	repeat
+		advancetext()
+	until line == GetInt("savegame.mod.line")
 end
 
 -- define game functions
@@ -67,7 +109,9 @@ function DrawImage(image, height)
 end
 
 function drawbackground(input)
-	DrawImage("MOD/DDLC/images.rpa/images/" .. background_image, UiHeight())
+	if input then
+		DrawImage("MOD/DDLC/images.rpa/images/" .. input, UiHeight())
+	end
 end
 
 function renderCompositeImage(image, alignment)
@@ -105,7 +149,7 @@ end
 
 -- setup character names
 	names = {}
-	names["mc"] = GetString("DDLC.MCNAME")
+	names["mc"] = GetString("savegame.mod.MCNAME")
  	names["monologue"] = "monologue"
 	names["s"] = "Sayori"
  	names["m"] = "Monika"
@@ -124,6 +168,24 @@ end
 	music["t2"] = "2" -- Ohayou Sayori!
 	music["t3"] = "3" -- Doki Doki Literature Club! (In Game Version)
 
+	-- heavy shitcode
+	chr_positions = {}
+	chr_positions["sayori"] = 0
+	chr_positions["monika"] = 0
+	chr_positions["natsuki"] = 0
+	chr_positions["yuri"] = 0
+
+-- find in table
+function findintable(find, table)
+	for i, v in table do
+		if v == find then
+			return I
+		else
+			return nil
+		end
+	end
+end
+
 -- text interpreting
 
 -- copilot wrote this one
@@ -138,21 +200,25 @@ end
 function showcharacter(input)
 	local character = splitcommand(input)[1]
 	local pose = splitcommand(input)[2]
-	DebugPrint("showcharacter() " .. character .. " " .. pose)
+	DebugPrint(character .. " " .. pose)
 	if character == "sayori" or character == "s" then
-		sayori_show[1] = true
-		sayori_show[2] = image_sayori[pose]
+		sayori_show[1] = image_sayori[pose]
+		local character = "sayori"
 	elseif character == "monika" or character == "m" then
-		monika_show[1] = true
-		monika_show[2] = image_monika[pose]
+		monika_show[1] = image_monika[pose]
+		local character = "monika"
 	elseif character == "natsuki" or character == "n" then
-		natsuki_show[1] = true
-		natsuki_show[2] = image_natsuki[pose]
+		natsuki_show[1] = image_natsuki[pose]
+		local character = "natsuki"
 	elseif character == "yuri" or character == "y" then
-		yuri_show[1] = true
-		yuri_show[2] = image_yuri[pose]
+		yuri_show[1] = image_yuri[pose]
+		local character = "yuri"
 	else
 		DebugPrint("Unknown character: " .. character)
+		local character = nil
+	end
+	if character then
+		table.insert(characters_on_screen, character)
 	end
 end
 
@@ -164,18 +230,17 @@ function interpretcommand(input)
 		elseif command[3] == "behind" then
 			return -- behind not implemented yet
 		else
-			DebugPrint("interpretcommand() " .. command[1] .. " " .. command[2] .. " " .. command[3])
-			local character = command[2]
+			DebugPrint(command[2] .. " " .. command[3])
 			showcharacter(command[2] .. " " .. command[3])
 		end
 		elseif command[1] == "play" then
 		playing_music = music[command[3]]
 	elseif command[1] == "scene" then
-		character_on_screen = nil
-		sayori_show[1] = false
-		yuri_show[1] = false
-		natsuki_show[1] = false
-		monika_show[1] = false
+		characters_on_screen = {}
+		sayori_show[1] = nil
+		yuri_show[1] = nil
+		natsuki_show[1] = nil
+		monika_show[1] = nil
 		if command[2] == "bg" then
 			background_image = image_bg[command[3]][1]
 		else
@@ -183,23 +248,45 @@ function interpretcommand(input)
 		end
 	elseif command[1] == "hide" then
 		if command[2] == "sayori" then
-			sayori_show[1] = false
+			sayori_show[1] = nil
+			--characters_on_screen[findintable("sayori", characters_on_screen)] = nil
 		elseif command[2] == "natsuki" then
-			natsuki_show[1] = false
+			natsuki_show[1] = nil
+			--characters_on_screen[findintable("natsuki", characters_on_screen)] = nil
 		elseif command[2] == "yuri" then
-			yuri_show[1] = false
+			yuri_show[1] = nil
+			--characters_on_screen[findintable("yuri", characters_on_screen)] = nil
 		elseif command[2] == "monika" then
-			monika_show[1] = false
+			monika_show[1] = nil
+			--characters_on_screen[findintable("monika", characters_on_screen)] = nil
 		else
 			DebugPrint("hide command failed??")
 		end
 	elseif command[1] == "return" then
-		LoadedChapter = LoadedChapter + 1
-		line = 0
+	--	LoadedChapter = LoadedChapter + 1
+	--	line = 0
+	--  previousposition = {chapter, line}
+		DebugPrint("Return is an interesting command.")
+	elseif command[1] == "call" then
+		for i, v in chapters[LoadedChapter] do
+			if v == "label " .. command[2] then
+				DebugPrint(v)
+				line = i
+				advancetext()
+			end
+		end
+	elseif command[1] == "$" then
+		specialcommand(command)
 	else
 		if command[1] then
 		DebugPrint("Unknown command: " .. command[1])
 		end
+	end
+end
+
+function specialcommand(command)
+	if command[2] == "renpy.quit()" then
+		menu()
 	end
 end
 
@@ -287,16 +374,16 @@ if in_novel == true then
 	UiResetNavigation()
 
 	if sayori_show[1] then
-		renderCompositeImage(sayori_show[2], 320)
-	end
-	if monika_show[1] then
-		renderCompositeImage(monika_show[2], 1400)
+		renderCompositeImage(sayori_show[1], 100)
 	end
 	if natsuki_show[1] then
-		renderCompositeImage(natsuki_show[2], 960)
+		renderCompositeImage(natsuki_show[1], 600)
 	end
 	if yuri_show[1] then
-		renderCompositeImage(yuri_show[2], 640)
+		renderCompositeImage(yuri_show[1], 1100)
+	end
+	if monika_show[1] then
+		renderCompositeImage(monika_show[1], 1600)
 	end
 
 	UiPop()
@@ -340,7 +427,7 @@ if in_novel == true then
 	UiFont(fonts["name"], 50)
 	--	Next button
 	UiTranslate(TextboxW*1.5-100, TextboxH*1.5-100)
-	if --[[UiTextButton("Next")]]InputPressed("Space") then
+	if InputReleased("space") then
 		UiSound("MOD/DDLC/audio.rpa/gui/sfx/select.ogg")
 		advancetext()
 	end
@@ -368,20 +455,26 @@ if in_novel == true then
 elseif in_poem_game == true then
 	-- poem game ui
 
-	background_image = backgrounds["notebook"]
+	background_image = "bg/notebook.png"
 
 	-- debug font
 	UiFont("MOD/fonts/riffic.ttf", 50)
 	UiTextOutline(0, 0.5, 1, 1, 0.6)
 elseif in_menu == true then
-	-- menu ui
-
+	--[[menu ui
+	
+	--background_image = "../gui/menu_bg.png"
+	UiFont("MOD/fonts/riffic.ttf", 50)
+	UiTextOutline(1, 0, 0.5, 1, 0.6)
 	UiPush()
 	UiTranslate(0, UiHeight()/2)
-	UiFont("MOD/DDLC/fonts.rpa/gui/font/Aller_Rg.ttf", 50)
-	UiText("Menu Placeholder")
-	UiPop()
-
+	UiText("Menu Placeholder", true)
+	if UiTextButton("New Game") then
+		in_menu = false
+		in_novel = true
+		advancetext()
+	end
+	UiPop()]]
 end
 
 -- DEBUGGING UI
@@ -390,11 +483,15 @@ if not InputDown("ctrl") then
 	UiResetNavigation()
 	UiFont("MOD/fonts/riffic.ttf", 50)
 	UiTranslate(50, 50)
-	UiText("in_novel = " .. tostring(in_novel) .. " in_poem_game = " .. tostring(in_poem_game))
+	UiText("in_novel=" .. tostring(in_novel) .. " in_poem_game=" .. tostring(in_poem_game) .. " in_menu=" .. tostring(in_menu))
 	UiTranslate(0, 50)
 	UiText('bg = "' .. background_image .. '" music = "' .. playing_music .. '"')
 	UiTranslate(0, 50)
+	if getspeaker() then
 	UiText("Line " .. line .. " Chapter " .. LoadedChapter .. " Speaker " .. getspeaker())
+	else
+	UiText("Line " .. line .. " Chapter " .. LoadedChapter)
+	end
 	UiTranslate(0, 25)
 	UiPush()
 	UiFont(fonts["name"], 25)
@@ -402,7 +499,7 @@ if not InputDown("ctrl") then
 	UiText(currenttext)
 	UiPop()
 	UiTranslate(0, 50)
-	UiText("S = " .. sayori_score .. " N = " .. natsuki_score .. " Y = " .. yuri_score)
+	UiText("S = " .. GetString("savegame.mod.sayori.show") .. " N = " .. natsuki_score .. " Y = " .. yuri_score)
 	if InputDown("uparrow") then
 		advancetext()
 	elseif InputPressed("downarrow") then
@@ -414,26 +511,21 @@ if not InputDown("ctrl") then
 
 	-- print savedata
 	UiResetNavigation()
-	UiTranslate(UiWidth()-500, 50)
+	UiTranslate(UiWidth()-500, -150)
 	UiText("Saved Data", true)
-	UiText("line " .. GetInt("DDLC.line") .. " chapter " .. GetInt("DDLC.chapter"), true)
-	UiText("S = " .. GetInt("DDLC.sayori_score") .. " N = " .. GetInt("DDLC.natsuki_score") .. " Y = " .. GetInt("DDLC.yuri_score"))
+	UiText("line " .. GetInt("savegame.mod.line") .. " chapter " .. GetInt("savegame.mod.chapter"), true)
+	UiText("S = " .. GetInt("savegame.mod.sayori_score") .. " N = " .. GetInt("savegame.mod.natsuki_score") .. " Y = " .. GetInt("savegame.mod.yuri_score"), true)
+	if UiTextButton("Save") then
+		SaveGame()
+	end
+	UiTranslate(0, 40)
+	if UiTextButton("Load") then
+		LoadGame()
+	end
+
 else
 	DebugPrint("")
 end
 
 -- end of draw function
-end
-
-function tick()
-	-- this really should be done in the tick function
-	if InputPressed("F9") then
-		-- switch to game
-		in_poem_game = false
-		in_novel = true
-	elseif InputPressed("F10") then
-		-- switch to poem game
-		in_novel = false
-		in_poem_game = true
-	end
 end
