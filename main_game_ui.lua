@@ -61,6 +61,12 @@ function tick()
 		in_poem_game = false
 		in_menu = true
 	end
+	if InputPressed("F8") then
+		in_pause = not in_pause
+	end
+	if InputDown("esc") then
+		SetPaused(false)
+	end
 end
 
 function SaveGame()
@@ -305,13 +311,24 @@ function getspeaker()
 	end
 end
 
+
+-- Strip text for displaying to textbox
 function striptext(texttostrip)
 	--  replace [player] with mc name
 	--  texttostrip = string.sub(texttostrip, "[player]", mc_name)
 	local first_quote = string.find(texttostrip, '"')
 	local last_quote = string.find(texttostrip, '"', first_quote + 1)
 	if first_quote and last_quote then
-		return string.sub(texttostrip, first_quote + 1, last_quote - 1)
+		local workingtext = string.sub(texttostrip, first_quote + 1, last_quote - 1)
+		if string.find(workingtext, "[player]", 1, true) then
+			workingtext = string.gsub(workingtext, "%[player%]", GetString("savegame.mod.mcname"))
+		end
+--[[	if string.find(workingtext, "{i}") and string.find(workingtext, "{/i}") then
+			local italicstart = string.find(workingtext, "{i}")
+			local italicend = string.find(workingtext, "{/i}")
+			workingtext = string.sub(workingtext, italicstart+3, italicend-4)
+		end]]
+		return workingtext
 	end
 	return texttostrip
 end
@@ -427,13 +444,23 @@ if in_novel == true then
 	UiFont(fonts["name"], 50)
 	--	Next button
 	UiTranslate(TextboxW*1.5-100, TextboxH*1.5-100)
-	if InputReleased("space") then
+	
+	if InputReleased("space") and not in_pause then
 		UiSound("MOD/DDLC/audio.rpa/gui/sfx/select.ogg")
 		advancetext()
 	end
 
 	UiPop()
 	--end
+
+	if in_pause then
+		drawbackground("../gui/overlay/game_menu.png")
+		UiResetNavigation()
+		UiFont("MOD/fonts/riffic.ttf", 50)
+		UiTextOutline(0.73, 0.33, 0.60, 1, 0.6)
+		UiTranslate(50, 100)
+		UiText("Paused")
+	end
 
 	UiResetNavigation()
 
