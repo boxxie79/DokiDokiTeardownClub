@@ -17,15 +17,14 @@ end
 -- local my_table = file_to_table("yourfile.txt")
 -- for i, v in ipairs(my_table) do print(i, v) end
 
-function RPY_TO_LUA(scriptnumber)
+function RPY_TO_LUA(script)
 
-outputfile = io.open("script_ch" .. scriptnumber .. ".lua","w")
-outputfile:write("--[[ converted DDLC script ]]\nscript_ch" .. scriptnumber .. " = {\n")
-outputfile:write("--[[ converted DDLC script ]]\nscript_ch" .. scriptnumber .. " = {\n")
+outputfile = io.open(script .. ".lua","w")
+outputfile:write("--[[ converted DDLC script ]]\n" .. script .. " = {\n")
 
-outputfile = io.open("script_ch" .. scriptnumber .. ".lua","a")
+outputfile = io.open(script .. ".lua","a")
 
-local output_table = file_to_table("script-ch" .. scriptnumber .. ".rpy")
+local output_table = file_to_table(script .. ".rpy")
 for linenumber, linecontent in ipairs(output_table) do
     linecontent = linecontent:match("^%s*(.*)")
     outputfile:write("  ",--[[linenumber,]] "'", linecontent, "',\n")

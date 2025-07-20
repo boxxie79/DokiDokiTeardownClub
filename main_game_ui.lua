@@ -1,9 +1,14 @@
 #include "/luascripts/script_ch0.lua"
 #include "/luascripts/script_ch1.lua"
+#include "/luascripts/script-exclusives-natsuki.lua"
+
 #include "/definitions/image_definitions2.lua"
 #include "/definitions/poemwords.lua"
 
 function init()
+
+	DebugUI = true
+
 	LoadedChapter = 0
 	line = 1
 
@@ -44,6 +49,60 @@ function init()
 	DebugPrint("startup complete")
 end
 
+-- set up tables
+
+-- chapters
+	script_chfallback = {"FALLBACKSTRING"}
+ 
+	chapters = {}
+
+	chapters[0] = script_ch0
+	chapters[1] = script_ch1
+	chapters["exclusives_natsuki"] = script_exclusives_natsuki
+
+-- setup character names
+	names = {}
+	names["mc"] = GetString("savegame.mod.MCNAME")
+ 	names["monologue"] = "monologue"
+	names["s"] = "Sayori"
+ 	names["m"] = "Monika"
+	names["n"] = "Natsuki"
+ 	names["y"] = "Yuri"
+	names["ny"] = "Nat & Yuri"
+
+--  set up fonts
+	fonts = {}
+	fonts["speech"] = "MOD/DDLC/fonts.rpa/gui/font/Aller_Rg.ttf"
+	fonts["name"] = "MOD/DDLC/fonts.rpa/gui/font/RifficFree-Bold.ttf"
+	fonts["mc_handwriting"] = "MOD/DDLC/fonts.rpa/gui/font/Halogen.ttf"
+
+--	set up music
+	music = {}
+	music["t1"] = "1" -- Doki Doki Literature Club!
+	music["t2"] = "2" -- Ohayou Sayori!
+	music["t3"] = "3" -- Doki Doki Literature Club! (In Game Version)
+	music["t4"] = "4" -- Dreams Of Love And Literature
+	music["t5"] = "5"
+	music["t6"] = "6"
+
+	-- heavy shitcode
+	chr_positions = {}
+	chr_positions["sayori"] = 0
+	chr_positions["monika"] = 0
+	chr_positions["natsuki"] = 0
+	chr_positions["yuri"] = 0
+
+	-- expressions used in game
+	expressions = {}
+	expressions["s_name"] = "Sayori"
+	expressions["n_name"] = "Peak"
+	expressions["y_name"] = "Y???"
+	expressions["m_name"] = "XXXXXX"
+	expressions["nextscene"] = ""
+	expressions["poemwinner"] = ""
+
+	poemwinner = {}
+
 function poemgamecontrol(control)
 	if control == "start" then
 		in_novel = false
@@ -76,6 +135,9 @@ function tick()
 	if InputDown("esc") then
 		SetPaused(false)
 	end
+	if InputPressed("ctrl") then
+		DebugUI = not DebugUI
+	end
 end
 
 function SaveGame()
@@ -86,6 +148,9 @@ function SaveGame()
 	SetInt("savegame.mod.sayori.score", sayori_score)
 	SetInt("savegame.mod.yuri.score", yuri_score)
 	SetInt("savegame.mod.natsuki.score", natsuki_score)
+	if poemwinner[0] then
+		SetString("savegame.mod.poemwinner0", poemwinner[0])
+	end
 	-- visuals
 	SetString("savegame.mod.visuals.scene", background_image)
 
@@ -100,6 +165,10 @@ function LoadGame()
 	sayori_score = GetInt("savegame.mod.sayori.score")
 	yuri_score = GetInt("savegame.mod.yuri.score")
 	natsuki_score = GetInt("savegame.mod.natsuki.score")
+
+	if GetString("savegame.mod.poemwinner0") then
+		poemwinner[0] = GetString("savegame.mod.poemwinner0")
+	end
 	-- visual
 	background_image = GetString("savegame.mod.visuals.scene")
 	-- trigger textbox update
@@ -165,46 +234,6 @@ function tableContains(table, key)
   return table[key] ~= nil
 end
 
--- setup chapter table
-	script_chfallback = {"FALLBACKSTRING"}
- 
-	chapters = {}
-
-	chapters["fallback"] = script_chfallback
-	chapters["debug"] = script_chdebug
-	chapters[0] = script_ch0
-	chapters[1] = script_ch1
-
--- setup character names
-	names = {}
-	names["mc"] = GetString("savegame.mod.MCNAME")
- 	names["monologue"] = "monologue"
-	names["s"] = "Sayori"
- 	names["m"] = "Monika"
-	names["n"] = "Natsuki"
- 	names["y"] = "Yuri"
-	names["ny"] = "Nat & Yuri"
-
---  set up fonts
-	fonts = {}
-	fonts["speech"] = "MOD/DDLC/fonts.rpa/gui/font/Aller_Rg.ttf"
-	fonts["name"] = "MOD/DDLC/fonts.rpa/gui/font/RifficFree-Bold.ttf"
-	fonts["mc_handwriting"] = "MOD/DDLC/fonts.rpa/gui/font/Halogen.ttf"
-
---	set up music
-	music = {}
-	music["t1"] = "1" -- Doki Doki Literature Club!
-	music["t2"] = "2" -- Ohayou Sayori!
-	music["t3"] = "3" -- Doki Doki Literature Club! (In Game Version)
-	music["t4"] = "4" -- Dreams Of Love And Literature
-
-	-- heavy shitcode
-	chr_positions = {}
-	chr_positions["sayori"] = 0
-	chr_positions["monika"] = 0
-	chr_positions["natsuki"] = 0
-	chr_positions["yuri"] = 0
-
 -- find in table
 function findintable(find, table)
 	for i, v in table do
@@ -243,6 +272,9 @@ function showcharacter(input)
 	elseif character == "yuri" or character == "y" then
 		yuri_show[1] = image_yuri[pose]
 		local character = "yuri"
+	elseif character == "bg" then
+		DebugPrint("WHAT")
+		background_image = image_bg[pose][1]
 	else
 		DebugPrint("Unknown character: " .. character)
 		local character = nil
@@ -293,21 +325,42 @@ function interpretcommand(input)
 			DebugPrint("hide command failed??")
 		end
 	elseif command[1] == "return" then
-	--	LoadedChapter = LoadedChapter + 1
-	--	line = 0
-	--	poemgamecontrol("start")
-	--  previousposition = {chapter, line}
+		if LoadedChapter == 0 then
+		LoadedChapter = LoadedChapter + 1
+		line = 0
+		poemgamecontrol("start")
+		elseif type(LoadedChapter) == "string" and string.find(LoadedChapter, "exclusives") then
+			LoadedChapter = PreviousChapter
+			line = PreviousLine
+		else
+		--  previousposition = {chapter, line}
 		DebugPrint("Return is an interesting command.")
 		return
+		end
 	elseif command[1] == "call" then
-		for i, v in chapters[LoadedChapter] do
+		if command[2] == "expression" then
+			DebugPrint("Calling from expression "..command[3])
+			DebugPrint(expressions["nextscene"])
+			for i, v in pairs(script_exclusives_natsuki) do
+				if v == "label " .. expressions["nextscene"] .. ":" then
+					DebugPrint("calling script exclusive natsuki " .. expressions["nextscene"])
+					PreviousChapter = LoadedChapter
+					PreviousLine = line
+					LoadedChapter = "exclusives_natsuki"
+					line = i
+					advancetext()
+				end
+			end
+		end
+		for i, v in pairs(chapters[LoadedChapter]) do
 			if v == "label " .. command[2] then
-				DebugPrint(v)
+				DebugPrint("calling "..v)
 				line = i
 				advancetext()
 			end
 		end
 	elseif command[1] == "$" then
+		DebugPrint("special command $")
 		specialcommand(command)
 	else
 		if command[1] then
@@ -319,6 +372,14 @@ end
 function specialcommand(command)
 	if command[2] == "renpy.quit()" then
 		menu()
+	elseif command[3] == "=" then 
+		DebugPrint("Ren'Py wants to change a variable.")
+		DebugPrint("variable is "..command[2])
+		if string.find(command[4], "poemwinner") then
+			DebugPrint("Hardcoding is bad for you.")
+			DebugPrint("Hardcoding chapter 1 next scene anyway...")
+			expressions["nextscene"] = poemwinner[0] .. "_exclusive_1"
+		end
 	end
 end
 
@@ -531,6 +592,13 @@ elseif in_poem_game == true then
 		wordspicked = wordspicked + 1
 		displaywords = PickPoemWords()
 		if wordspicked == 10 then
+			if math.max(sayori_score, natsuki_score, yuri_score) == sayori_score then
+				poemwinner[LoadedChapter-1] = "sayori"
+			elseif math.max(sayori_score, natsuki_score, yuri_score) == natsuki_score then
+				poemwinner[LoadedChapter-1] = "natsuki"
+			else
+				poemwinner[LoadedChapter-1] = "yuri"
+			end
 			poemgamecontrol("end")
 	end
 	end
@@ -557,30 +625,32 @@ elseif in_menu == true then
 	end
 	UiPop()]]
 end
--- 
 -- DEBUGGING UI
 
-if not InputDown("ctrl") then
+if DebugUI then
 	UiResetNavigation()
 	UiFont("MOD/fonts/riffic.ttf", 50)
 	UiTranslate(50, 50)
-	UiText("in_novel=" .. tostring(in_novel) .. " in_poem_game=" .. tostring(in_poem_game) .. " in_menu=" .. tostring(in_menu))
-	UiTranslate(0, 50)
-	UiText('bg = "' .. background_image .. '" music = "' .. playing_music .. '"')
-	UiTranslate(0, 50)
+	UiText("in_novel=" .. tostring(in_novel) .. " in_poem_game=" .. tostring(in_poem_game) .. " in_menu=" .. tostring(in_menu), true)
+	UiText('bg = "' .. background_image .. '" music = "' .. playing_music .. '"', true)
 	if getspeaker() then
-	UiText("Line " .. line .. " Chapter " .. LoadedChapter .. " Speaker " .. getspeaker())
+	UiText("Line " .. line .. " Chapter " .. LoadedChapter .. " Speaker " .. getspeaker(), true)
 	else
-	UiText("Line " .. line .. " Chapter " .. LoadedChapter)
+	UiText("Line " .. line .. " Chapter " .. LoadedChapter, true)
 	end
-	UiTranslate(0, 25)
-	UiPush()
 	UiFont(fonts["name"], 25)
+	UiTranslate(0,-25)
 	UiWordWrap(1800)
-	UiText(currenttext)
-	UiPop()
-	UiTranslate(0, 50)
-	UiText("S = " .. sayori_score .. " N = " .. natsuki_score .. " Y = " .. yuri_score)
+	UiText(currenttext, true)
+	UiTranslate(0,25)
+	UiFont(fonts["name"], 50)
+	UiText("S = " .. sayori_score .. " N = " .. natsuki_score .. " Y = " .. yuri_score, true)
+	if type(LoadedChapter) == "number" and poemwinner[LoadedChapter-1] then
+		UiText("poemwinner[" .. LoadedChapter-1 .."] = " .. poemwinner[LoadedChapter-1], true)
+	end
+	if expressions["nextscene"] then
+		UiText(expressions["nextscene"], true)
+	end
 	if InputDown("uparrow") then
 		advancetext()
 	elseif InputPressed("downarrow") then
@@ -596,6 +666,9 @@ if not InputDown("ctrl") then
 	UiText("Saved Data", true)
 	UiText("line " .. GetInt("savegame.mod.line") .. " chapter " .. GetInt("savegame.mod.chapter"), true)
 	UiText("S = " .. GetInt("savegame.mod.sayori.score") .. " N = " .. GetInt("savegame.mod.natsuki.score") .. " Y = " .. GetInt("savegame.mod.yuri.score"), true)
+	if GetString("savegame.mod.poemwinner0") then
+		UiText(GetString("savegame.mod.poemwinner0"), true)
+	end
 	if UiTextButton("Save") then
 		SaveGame()
 	end
