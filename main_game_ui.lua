@@ -1,7 +1,7 @@
 #include "/luascripts/script_ch0.lua"
 #include "/luascripts/script_ch1.lua"
-#include "/luascripts/script_chdebug.lua"
 #include "/definitions/image_definitions2.lua"
+#include "/definitions/poemwords.lua"
 
 function init()
 	LoadedChapter = 0
@@ -24,10 +24,11 @@ function init()
 	sayori_score = 0
 	natsuki_score = 0
 	yuri_score = 0
-	
+
 	background_image = "../gui/menu_bg.png"
 	
 	characters_on_screen = {}
+	displaywords = {}
 
 	-- pose | position
 	-- if pose is nil, don't show 
@@ -43,18 +44,26 @@ function init()
 	DebugPrint("startup complete")
 end
 
+function poemgamecontrol(control)
+	if control == "start" then
+		in_novel = false
+		in_poem_game = true
+		wordspicked = 0
+		displaywords = PickPoemWords()
+	elseif control == "end" then
+		in_poem_game = false
+		in_novel = true
+		line = 0
+		advancetext()
+	end
+end
+
 function tick()
 	DrawSprite(LoadSprite("MOD/DDLC/images.rpa/gui/menu_bg.png"), Transform(Vec(0, 1, 0)), 5, 5)
 	if InputPressed("F9") then
-		-- switch to game
-		in_menu = false
-		in_poem_game = false
-		in_novel = true
+		poemgamecontrol("end")
 	elseif InputPressed("F10") then
-		-- switch to poem game
-		in_menu = false
-		in_novel = false
-		in_poem_game = true
+		poemgamecontrol("start")
 	elseif InputPressed("F11") then
 		-- switch to menu (soon to be default state ok?)
 		in_novel = false
@@ -86,7 +95,7 @@ end
 function LoadGame()
     -- basics
 	LoadedChapter = GetInt("savegame.mod.chapter")
-	line = GetInt("savegame.mod.line")-1
+	line = 0
 	-- affection scores
 	sayori_score = GetInt("savegame.mod.sayori.score")
 	yuri_score = GetInt("savegame.mod.yuri.score")
@@ -103,6 +112,19 @@ end
 function PlayMusicLoop(input)
 	local musicpath = "MOD/DDLC/audio.rpa/bgm/" .. input .. ".ogg"
 	UiSoundLoop(musicpath)
+end
+
+function PickPoemWords()
+	local table = {}
+	for loop = 1,10 do
+		local word = 0
+		repeat
+			word = math.floor(math.random(4, 235))
+		until PWN[word]
+		DebugPrint(word)
+		table[loop] = PWN[word]
+	end
+	return table
 end
 
 -- The Holy Grail Of VISUAL Novels
@@ -167,12 +189,14 @@ end
 	fonts = {}
 	fonts["speech"] = "MOD/DDLC/fonts.rpa/gui/font/Aller_Rg.ttf"
 	fonts["name"] = "MOD/DDLC/fonts.rpa/gui/font/RifficFree-Bold.ttf"
+	fonts["mc_handwriting"] = "MOD/DDLC/fonts.rpa/gui/font/Halogen.ttf"
 
 --	set up music
 	music = {}
 	music["t1"] = "1" -- Doki Doki Literature Club!
 	music["t2"] = "2" -- Ohayou Sayori!
 	music["t3"] = "3" -- Doki Doki Literature Club! (In Game Version)
+	music["t4"] = "4" -- Dreams Of Love And Literature
 
 	-- heavy shitcode
 	chr_positions = {}
@@ -271,8 +295,10 @@ function interpretcommand(input)
 	elseif command[1] == "return" then
 	--	LoadedChapter = LoadedChapter + 1
 	--	line = 0
+	--	poemgamecontrol("start")
 	--  previousposition = {chapter, line}
 		DebugPrint("Return is an interesting command.")
+		return
 	elseif command[1] == "call" then
 		for i, v in chapters[LoadedChapter] do
 			if v == "label " .. command[2] then
@@ -481,11 +507,39 @@ if in_novel == true then
 	UiPop() ]]-- END OF GAME UI
 elseif in_poem_game == true then
 	-- poem game ui
+	UiPush()
+
+	PlayMusicLoop(music["t4"]) -- dreams of love and literature
 
 	background_image = "bg/notebook.png"
 
+	UiFont(fonts["mc_handwriting"], 50)
+	UiTranslate(100, 300)
+	UiTextOutline(0,0,0,1,0.5)
+	if UiTextButton("reroll " .. wordspicked .. "/10") then
+		DebugPrint("Rerolling")
+		displaywords = PickPoemWords()
+	end
+	UiTranslate(0,50)
+	for loop = 1,10 do
+	UiTranslate(0,50)
+	if UiTextButton(displaywords[loop]) then
+		DebugPrint(displaywords[loop].." click!")
+		sayori_score = sayori_score + poemwords[displaywords[loop]][2]
+		natsuki_score = natsuki_score + poemwords[displaywords[loop]][3]
+		yuri_score = yuri_score + poemwords[displaywords[loop]][4]
+		wordspicked = wordspicked + 1
+		displaywords = PickPoemWords()
+		if wordspicked == 10 then
+			poemgamecontrol("end")
+	end
+	end
+	end
+
+
+	UiPop()
 	-- debug font
-	UiFont("MOD/fonts/riffic.ttf", 50)
+	--UiFont("MOD/fonts/riffic.ttf", 50)
 	UiTextOutline(0, 0.5, 1, 1, 0.6)
 elseif in_menu == true then
 	--[[menu ui
@@ -503,7 +557,7 @@ elseif in_menu == true then
 	end
 	UiPop()]]
 end
-
+-- 
 -- DEBUGGING UI
 
 if not InputDown("ctrl") then
@@ -526,7 +580,7 @@ if not InputDown("ctrl") then
 	UiText(currenttext)
 	UiPop()
 	UiTranslate(0, 50)
-	UiText("S = " .. GetString("savegame.mod.sayori.show") .. " N = " .. natsuki_score .. " Y = " .. yuri_score)
+	UiText("S = " .. sayori_score .. " N = " .. natsuki_score .. " Y = " .. yuri_score)
 	if InputDown("uparrow") then
 		advancetext()
 	elseif InputPressed("downarrow") then
@@ -541,7 +595,7 @@ if not InputDown("ctrl") then
 	UiTranslate(UiWidth()-500, -150)
 	UiText("Saved Data", true)
 	UiText("line " .. GetInt("savegame.mod.line") .. " chapter " .. GetInt("savegame.mod.chapter"), true)
-	UiText("S = " .. GetInt("savegame.mod.sayori_score") .. " N = " .. GetInt("savegame.mod.natsuki_score") .. " Y = " .. GetInt("savegame.mod.yuri_score"), true)
+	UiText("S = " .. GetInt("savegame.mod.sayori.score") .. " N = " .. GetInt("savegame.mod.natsuki.score") .. " Y = " .. GetInt("savegame.mod.yuri.score"), true)
 	if UiTextButton("Save") then
 		SaveGame()
 	end
