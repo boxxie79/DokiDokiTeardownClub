@@ -1,15 +1,25 @@
 #include "/luascripts/script_ch0.lua"
 #include "/luascripts/script_ch1.lua"
-#include "/luascripts/script-exclusives-natsuki.lua"
 
-#include "/definitions/image_definitions2.lua"
+#include "/luascripts/script-exclusives-sayori.lua"
+#include "/luascripts/script-exclusives-natsuki.lua"
+#include "/luascripts/script-exclusives-yuri.lua"
+
+#include "/luascripts/script_contentwarning.lua"
+
+#include "/definitions/image_definitions.lua"
 #include "/definitions/poemwords.lua"
 
 function init()
 
 	DebugUI = true
 
+	if GetBool("savegame.mod.seendisclaimer") == false then
+		LoadedChapter = "contentwarning"
+		SetBool("savegame.mod.seendisclaimer", true)
+	else
 	LoadedChapter = 0
+	end
 	line = 1
 
 	currenttext = "fallback"
@@ -46,7 +56,12 @@ function init()
 	in_poem_game = false
 	in_menu = false
 
+	making_choice = false
+	in_pause = false
+
 	DebugPrint("startup complete")
+
+	advancetext()
 end
 
 -- set up tables
@@ -56,9 +71,13 @@ end
  
 	chapters = {}
 
+	chapters["contentwarning"] = script_contentwarning
+
 	chapters[0] = script_ch0
 	chapters[1] = script_ch1
 	chapters["exclusives_natsuki"] = script_exclusives_natsuki
+	chapters["exclusives_sayori"] = script_exclusives_sayori
+	chapters["exclusives_yuri"] = script_exclusives_yuri
 
 -- setup character names
 	names = {}
@@ -103,7 +122,7 @@ end
 
 	poemwinner = {}
 
-function poemgamecontrol(control)
+function PoemGameControl(control)
 	if control == "start" then
 		in_novel = false
 		in_poem_game = true
@@ -120,9 +139,9 @@ end
 function tick()
 	DrawSprite(LoadSprite("MOD/DDLC/images.rpa/gui/menu_bg.png"), Transform(Vec(0, 1, 0)), 5, 5)
 	if InputPressed("F9") then
-		poemgamecontrol("end")
+		PoemGameControl("end")
 	elseif InputPressed("F10") then
-		poemgamecontrol("start")
+		PoemGameControl("start")
 	elseif InputPressed("F11") then
 		-- switch to menu (soon to be default state ok?)
 		in_novel = false
@@ -159,6 +178,8 @@ end
 
 function LoadGame()
     -- basics
+	in_poem_game = false
+	in_novel = true
 	LoadedChapter = GetInt("savegame.mod.chapter")
 	line = 0
 	-- affection scores
@@ -183,6 +204,32 @@ function PlayMusicLoop(input)
 	UiSoundLoop(musicpath)
 end
 
+function ClickPoemWord(input)
+	DebugPrint(input.." click!")
+	sayori_score = sayori_score + poemwords[input][2]
+	natsuki_score = natsuki_score + poemwords[input][3]
+	yuri_score = yuri_score + poemwords[input][4]
+	wordspicked = wordspicked + 1
+	if math.max(poemwords[input][2], poemwords[input][3], poemwords[input][4]) == poemwords[input][2] then
+		lastwordwinner = "sayori"
+	elseif math.max(poemwords[input][2], poemwords[input][3], poemwords[input][4]) == poemwords[input][3] then
+		lastwordwinner = "natsuki"
+	else
+		lastwordwinner = "yuri"
+	end
+	displaywords = PickPoemWords()
+	if wordspicked == 10 then
+		if math.max(sayori_score, natsuki_score, yuri_score) == sayori_score then
+			poemwinner[LoadedChapter-1] = "sayori"
+		elseif math.max(sayori_score, natsuki_score, yuri_score) == natsuki_score then
+			poemwinner[LoadedChapter-1] = "natsuki"
+		else
+			poemwinner[LoadedChapter-1] = "yuri"
+		end
+		PoemGameControl("end")
+	end
+end
+
 function PickPoemWords()
 	local table = {}
 	for loop = 1,10 do
@@ -205,13 +252,13 @@ function DrawImage(image, height)
   UiPop()
 end
 
-function drawbackground(input)
+function drawFullscreen(input)
 	if input then
 		DrawImage("MOD/DDLC/images.rpa/images/" .. input, UiHeight())
 	end
 end
 
-function renderCompositeImage(image, alignment)
+function RenderCompositeImage(image, alignment)
 	UiPush()
 	UiResetNavigation()
 	local ih, iw = UiGetImageSize("MOD/DDLC/images.rpa/images/" .. image[1])
@@ -284,6 +331,19 @@ function showcharacter(input)
 	end
 end
 
+--[[
+$$$$$$\            $$\                                                        $$\      $$$$$$\                                                                  $$\   $$$\ $$$\   
+\_$$  _|           $$ |                                                       $$ |    $$  __$$\                                                                 $$ | $$  _| \$$\  
+  $$ |  $$$$$$$\ $$$$$$\    $$$$$$\   $$$$$$\   $$$$$$\   $$$$$$\   $$$$$$\ $$$$$$\   $$ /  \__| $$$$$$\  $$$$$$\$$$$\  $$$$$$\$$$$\   $$$$$$\  $$$$$$$\   $$$$$$$ |$$  /    \$$\ 
+  $$ |  $$  __$$\\_$$  _|  $$  __$$\ $$  __$$\ $$  __$$\ $$  __$$\ $$  __$$\\_$$  _|  $$ |      $$  __$$\ $$  _$$  _$$\ $$  _$$  _$$\  \____$$\ $$  __$$\ $$  __$$ |$$ |      $$ |
+  $$ |  $$ |  $$ | $$ |    $$$$$$$$ |$$ |  \__|$$ /  $$ |$$ |  \__|$$$$$$$$ | $$ |    $$ |      $$ /  $$ |$$ / $$ / $$ |$$ / $$ / $$ | $$$$$$$ |$$ |  $$ |$$ /  $$ |$$ |      $$ |
+  $$ |  $$ |  $$ | $$ |$$\ $$   ____|$$ |      $$ |  $$ |$$ |      $$   ____| $$ |$$\ $$ |  $$\ $$ |  $$ |$$ | $$ | $$ |$$ | $$ | $$ |$$  __$$ |$$ |  $$ |$$ |  $$ |\$$\     $$  |
+$$$$$$\ $$ |  $$ | \$$$$  |\$$$$$$$\ $$ |      $$$$$$$  |$$ |      \$$$$$$$\  \$$$$  |\$$$$$$  |\$$$$$$  |$$ | $$ | $$ |$$ | $$ | $$ |\$$$$$$$ |$$ |  $$ |\$$$$$$$ | \$$$\ $$$  / 
+\______|\__|  \__|  \____/  \_______|\__|      $$  ____/ \__|       \_______|  \____/  \______/  \______/ \__| \__| \__|\__| \__| \__| \_______|\__|  \__| \_______|  \___|\___/  
+                                               $$ |                                                                                                                               
+                                               $$ |                                                                                                                               
+                                               \_]]
+
 function interpretcommand(input)
 	local command = splitcommand(input)
 	if command[1] == "show" then
@@ -325,13 +385,21 @@ function interpretcommand(input)
 			DebugPrint("hide command failed??")
 		end
 	elseif command[1] == "return" then
+		-- end chapter 0
 		if LoadedChapter == 0 then
 		LoadedChapter = LoadedChapter + 1
 		line = 0
-		poemgamecontrol("start")
+		PoemGameControl("start")
+		-- go back to main script from side path
 		elseif type(LoadedChapter) == "string" and string.find(LoadedChapter, "exclusives") then
 			LoadedChapter = PreviousChapter
 			line = PreviousLine
+		elseif LoadedChapter == 1 then
+			sharePoems()
+		elseif LoadedChapter == "contentwarning" then
+			LoadedChapter = 0
+			line = 0
+			advancetext()
 		else
 		--  previousposition = {chapter, line}
 		DebugPrint("Return is an interesting command.")
@@ -341,14 +409,13 @@ function interpretcommand(input)
 		if command[2] == "expression" then
 			DebugPrint("Calling from expression "..command[3])
 			DebugPrint(expressions["nextscene"])
-			for i, v in pairs(script_exclusives_natsuki) do
+			for i, v in pairs(chapters["exclusives_"..poemwinner[0]]) do
 				if v == "label " .. expressions["nextscene"] .. ":" then
-					DebugPrint("calling script exclusive natsuki " .. expressions["nextscene"])
+					DebugPrint("calling " .. expressions["nextscene"])
 					PreviousChapter = LoadedChapter
 					PreviousLine = line
-					LoadedChapter = "exclusives_natsuki"
+					LoadedChapter = "exclusives_"..poemwinner[0]
 					line = i
-					advancetext()
 				end
 			end
 		end
@@ -461,7 +528,7 @@ UiPush()
 UiCenterH = UiHeight()/2
 UiCenterW = UiWidth()/2
 --	draw background
-drawbackground(background_image)
+drawFullscreen(background_image)
 if not InputDown("shift") then
 UiMakeInteractive()
 end
@@ -478,16 +545,16 @@ if in_novel == true then
 	UiResetNavigation()
 
 	if sayori_show[1] then
-		renderCompositeImage(sayori_show[1], 100)
+		RenderCompositeImage(sayori_show[1], 100)
 	end
 	if natsuki_show[1] then
-		renderCompositeImage(natsuki_show[1], 600)
+		RenderCompositeImage(natsuki_show[1], 600)
 	end
 	if yuri_show[1] then
-		renderCompositeImage(yuri_show[1], 1100)
+		RenderCompositeImage(yuri_show[1], 1100)
 	end
 	if monika_show[1] then
-		renderCompositeImage(monika_show[1], 1600)
+		RenderCompositeImage(monika_show[1], 1600)
 	end
 
 	UiPop()
@@ -532,21 +599,40 @@ if in_novel == true then
 	--	Next button
 	UiTranslate(TextboxW*1.5-100, TextboxH*1.5-100)
 	
-	if InputReleased("space") and not in_pause then
-		UiSound("MOD/DDLC/audio.rpa/gui/sfx/select.ogg")
+	if InputReleased("space") and not in_pause and not making_choice then
 		advancetext()
 	end
 
 	UiPop()
+	UiPush()
+	-- menu buttons
+	UiTranslate(550,1040)
+	UiFont(fonts["speech"], 30)
+	if in_pause == false then
+		if UiTextButton("Settings") then
+			in_pause = true
+		end
+		UiTranslate(150)
+		if UiTextButton("Save") then
+			SaveGame()
+		end
+		UiTranslate(100)
+		if UiTextButton("Load") then
+			LoadGame()
+		end
+	end
+	UiPop()
 	--end
 
 	if in_pause then
-		drawbackground("../gui/overlay/game_menu.png")
+		UiPush()
+		drawFullscreen("../gui/overlay/game_menu.png")
 		UiResetNavigation()
-		UiFont("MOD/fonts/riffic.ttf", 50)
+		UiFont(fonts["name"], 50)
 		UiTextOutline(0.73, 0.33, 0.60, 1, 0.6)
 		UiTranslate(50, 100)
 		UiText("Paused")
+		UiPop()
 	end
 
 	UiResetNavigation()
@@ -573,38 +659,53 @@ elseif in_poem_game == true then
 	PlayMusicLoop(music["t4"]) -- dreams of love and literature
 
 	background_image = "bg/notebook.png"
-
 	UiFont(fonts["mc_handwriting"], 50)
-	UiTranslate(100, 300)
 	UiTextOutline(0,0,0,1,0.5)
-	if UiTextButton("reroll " .. wordspicked .. "/10") then
+
+	UiPush()
+	UiTranslate(1200,128)
+	if UiTextButton(wordspicked .. "/10") then
 		DebugPrint("Rerolling")
 		displaywords = PickPoemWords()
 	end
-	UiTranslate(0,50)
-	for loop = 1,10 do
-	UiTranslate(0,50)
-	if UiTextButton(displaywords[loop]) then
-		DebugPrint(displaywords[loop].." click!")
-		sayori_score = sayori_score + poemwords[displaywords[loop]][2]
-		natsuki_score = natsuki_score + poemwords[displaywords[loop]][3]
-		yuri_score = yuri_score + poemwords[displaywords[loop]][4]
-		wordspicked = wordspicked + 1
-		displaywords = PickPoemWords()
-		if wordspicked == 10 then
-			if math.max(sayori_score, natsuki_score, yuri_score) == sayori_score then
-				poemwinner[LoadedChapter-1] = "sayori"
-			elseif math.max(sayori_score, natsuki_score, yuri_score) == natsuki_score then
-				poemwinner[LoadedChapter-1] = "natsuki"
-			else
-				poemwinner[LoadedChapter-1] = "yuri"
-			end
-			poemgamecontrol("end")
-	end
-	end
-	end
+	UiPop()
 
+	UiTranslate(720, 269)
+	-- poemgame menu
+	for loop = 1,5 do
+		if UiTextButton(displaywords[loop]) then
+			ClickPoemWord(displaywords[loop])
+		end
+		UiTranslate(265, 0)
+		if UiTextButton(displaywords[loop+5]) then
+			ClickPoemWord(displaywords[loop+5])
+		end
+		UiTranslate(-265,137)
+	end
+	UiPop()
 
+	-- draw stickers
+	UiPush()
+	
+	UiTranslate(60,760)
+	if lastwordwinner == "sayori" then
+	DrawImage("MOD/DDLC/images.rpa/gui/poemgame/s_sticker_2.png", 200)
+	else 
+	DrawImage("MOD/DDLC/images.rpa/gui/poemgame/s_sticker_1.png", 200)
+	end
+	UiTranslate(175, 0)
+	if lastwordwinner == "natsuki" then
+	DrawImage("MOD/DDLC/images.rpa/gui/poemgame/n_sticker_2.png", 200)
+	else 
+	DrawImage("MOD/DDLC/images.rpa/gui/poemgame/n_sticker_1.png", 200)
+	end
+	UiTranslate(175, 0)
+	if lastwordwinner == "yuri" then
+	DrawImage("MOD/DDLC/images.rpa/gui/poemgame/y_sticker_2.png", 200)
+	else 
+	DrawImage("MOD/DDLC/images.rpa/gui/poemgame/y_sticker_1.png", 200)
+	end
+	
 	UiPop()
 	-- debug font
 	--UiFont("MOD/fonts/riffic.ttf", 50)
@@ -629,7 +730,8 @@ end
 
 if DebugUI then
 	UiResetNavigation()
-	UiFont("MOD/fonts/riffic.ttf", 50)
+	UiFont(fonts["name"], 50)
+	UiPush()
 	UiTranslate(50, 50)
 	UiText("in_novel=" .. tostring(in_novel) .. " in_poem_game=" .. tostring(in_poem_game) .. " in_menu=" .. tostring(in_menu), true)
 	UiText('bg = "' .. background_image .. '" music = "' .. playing_music .. '"', true)
@@ -638,32 +740,40 @@ if DebugUI then
 	else
 	UiText("Line " .. line .. " Chapter " .. LoadedChapter, true)
 	end
-	UiFont(fonts["name"], 25)
-	UiTranslate(0,-25)
-	UiWordWrap(1800)
-	UiText(currenttext, true)
-	UiTranslate(0,25)
-	UiFont(fonts["name"], 50)
 	UiText("S = " .. sayori_score .. " N = " .. natsuki_score .. " Y = " .. yuri_score, true)
 	if type(LoadedChapter) == "number" and poemwinner[LoadedChapter-1] then
 		UiText("poemwinner[" .. LoadedChapter-1 .."] = " .. poemwinner[LoadedChapter-1], true)
 	end
-	if expressions["nextscene"] then
-		UiText(expressions["nextscene"], true)
+	UiFont(fonts["name"], 25)
+	UiWordWrap(1800)
+
+	UiText(chapters[LoadedChapter][line-4], true)
+	UiText(chapters[LoadedChapter][line-3], true)
+	UiText(chapters[LoadedChapter][line-2], true)
+	UiText(chapters[LoadedChapter][line-1], true)
+
+	UiText(currenttext, true)
+	UiTranslate(0,25)
+	UiFont(fonts["name"], 50)
+
+	if expressions["nextscene"] and not expressions["nextscene"] == " " then
+		UiText("nextscene="..expressions["nextscene"], true)
 	end
-	if InputDown("uparrow") then
+
+	if InputDown("uparrow") and in_novel then
 		advancetext()
-	elseif InputPressed("downarrow") then
+	elseif InputPressed("downarrow") and in_novel then
 		advancetext("1")
-	elseif InputDown("leftarrow") then
+	elseif InputDown("leftarrow") and in_novel then
 		line = 0
 		advancetext()
 	end
-
+	UiPop()
 	-- print savedata
+	UiPush()
 	UiResetNavigation()
-	UiTranslate(UiWidth()-500, -150)
-	UiText("Saved Data", true)
+	UiTranslate(UiWidth()-500, 50)
+	UiText("Save Slot 1", true)
 	UiText("line " .. GetInt("savegame.mod.line") .. " chapter " .. GetInt("savegame.mod.chapter"), true)
 	UiText("S = " .. GetInt("savegame.mod.sayori.score") .. " N = " .. GetInt("savegame.mod.natsuki.score") .. " Y = " .. GetInt("savegame.mod.yuri.score"), true)
 	if GetString("savegame.mod.poemwinner0") then
@@ -672,11 +782,36 @@ if DebugUI then
 	if UiTextButton("Save") then
 		SaveGame()
 	end
-	UiTranslate(0, 40)
+	UiTranslate(100, 0)
 	if UiTextButton("Load") then
 		LoadGame()
 	end
-
+	UiTranslate(0, 40)
+	if UiTextButton("First run") then
+		SetBool("savegame.mod.seendisclaimer", false)
+		LoadedChapter = "contentwarning"
+		line = 0 
+		init()
+	end
+	UiPop()
+	local displaymousex, displaymousey = 0
+	mousex, mousey = UiGetMousePos()
+	if mousey > 650 and mousex > 300 and mousex < 1630 and in_novel then
+		displaymousey = mousey - ( mousey - 650 )
+	elseif mousey > 870 then
+		displaymousey = mousey - ( mousey - 870 )
+	else
+		displaymousey = mousey
+	end
+	if mousex > 1800 then
+		displaymousex = mousex - ( mousex - 1800 )
+	elseif mousex < 100 then
+		displaymousex = mousex + 100-mousex
+	else
+		displaymousex = mousex
+	end
+	UiTranslate(displaymousex-50, displaymousey+100)
+	UiText("X"..math.floor(mousex).. "\nY" .. math.floor(mousey))
 else
 	DebugPrint("")
 end
