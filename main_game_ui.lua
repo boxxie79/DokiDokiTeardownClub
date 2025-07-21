@@ -8,6 +8,8 @@
 #include "/luascripts/script_contentwarning.lua"
 
 #include "/definitions/image_definitions.lua"
+#include "/definitions/cgs.lua"
+
 #include "/definitions/poemwords.lua"
 
 function init()
@@ -44,6 +46,8 @@ function init()
 	
 	characters_on_screen = {}
 	displaywords = {}
+
+	cg_on_screen = {}
 
 	-- pose | position
 	-- if pose is nil, don't show 
@@ -322,6 +326,15 @@ function showcharacter(input)
 	elseif character == "bg" then
 		DebugPrint("WHAT")
 		background_image = image_bg[pose][1]
+	elseif string.find(character, "cg") then
+		if string.find(character, "exp") then 
+			DebugPrint("ShowCharacter Showing CG Expression "..character)
+			cg_on_screen["exp"] = character
+		end
+		if string.find(character, "base") then
+			DebugPrint("ShowCharacter Showing CG Base "..character)
+			cg_on_screen["base"] = character
+		end
 	else
 		DebugPrint("Unknown character: " .. character)
 		local character = nil
@@ -351,6 +364,15 @@ function interpretcommand(input)
 			return -- zorder not implemented yet
 		elseif command[3] == "behind" then
 			return -- behind not implemented yet
+		elseif string.find(command[2], "cg") then
+			if string.find(command[2], "exp") then 
+				DebugPrint("InterpretCommand Showing CG Expression "..command[2])
+				cg_on_screen["exp"] = command[2]
+			end
+			if string.find(command[2], "base") then
+				DebugPrint("InterpretCommand Showing CG Base "..command[2])
+				cg_on_screen["base"] = command[2]
+			end
 		else
 			DebugPrint(command[2] .. " " .. command[3])
 			showcharacter(command[2] .. " " .. command[3])
@@ -364,9 +386,12 @@ function interpretcommand(input)
 		natsuki_show[1] = nil
 		monika_show[1] = nil
 		if command[2] == "bg" then
+			in_cg = false
 			background_image = image_bg[command[3]][1]
 		else
-			DebugPrint("CG support not implemented")
+			in_cg = true
+			cg_on_screen["bg"] = command[2]
+			background_image = image_cg[cg_on_screen["bg"]]
 		end
 	elseif command[1] == "hide" then
 		if command[2] == "sayori" then
@@ -381,8 +406,16 @@ function interpretcommand(input)
 		elseif command[2] == "monika" then
 			monika_show[1] = nil
 			--characters_on_screen[findintable("monika", characters_on_screen)] = nil
+		elseif string.find(command[2], "cg") then
+			if command[2] == cg_on_screen["exp"] then
+				cg_on_screen["exp"] = nil
+			elseif command[2] == cg_on_screen["base"] then
+				cg_on_screen["base"] = nil
+			else
+				DebugPrint("WHAT???")
+			end
 		else
-			DebugPrint("hide command failed??")
+				DebugPrint("hide command failed??")
 		end
 	elseif command[1] == "return" then
 		-- end chapter 0
@@ -557,6 +590,14 @@ if in_novel == true then
 		RenderCompositeImage(monika_show[1], 1600)
 	end
 
+	if in_cg then
+		if cg_on_screen["base"] then
+			drawFullscreen(image_cg[cg_on_screen["base"]])
+		end
+		if cg_on_screen["exp"] then
+			drawFullscreen(image_cg[cg_on_screen["exp"]])
+		end
+	end
 	UiPop()
 
 	--	Textbox
@@ -734,6 +775,9 @@ if DebugUI then
 	UiPush()
 	UiTranslate(50, 50)
 	UiText("in_novel=" .. tostring(in_novel) .. " in_poem_game=" .. tostring(in_poem_game) .. " in_menu=" .. tostring(in_menu), true)
+	if in_cg then
+		UiText("IN CG "..background_image.." base="..cg_on_screen["base"].." exp="..tostring(cg_on_screen["exp"]), true)
+	end
 	UiText('bg = "' .. background_image .. '" music = "' .. playing_music .. '"', true)
 	if getspeaker() then
 	UiText("Line " .. line .. " Chapter " .. LoadedChapter .. " Speaker " .. getspeaker(), true)
