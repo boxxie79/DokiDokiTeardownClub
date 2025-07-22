@@ -1,5 +1,5 @@
 script_contentwarning = {
-'label contentwarning:',
+'label cw_0:',
 'scene bg warning',
 '"This is a Doki Doki Literature Club fan game that is not affiliated with Team Salvato."',
 '"It is not designed to be a replacement for the original game, simply an exploration of the limits of Teardown\'s modding capabilities."',
@@ -7,8 +7,14 @@ script_contentwarning = {
 '"Now that the legal disclaimer\'s out of the way, time for another legal disclaimer..."',
 '"This game is not suitable for children or those who are easily disturbed."',
 '"Individuals suffering from anxiety or depression may not have a safe experience playing this game. For content warnings, please visit: http://ddlc.moe/warning.html"',
+'menu:',
 '"By playing Doki Doki Literature Club, you agree that you are at least 13 years of age, and you consent to your exposure of highly disturbing content."',
-'"I haven\'t figured out how to do choices yet!"',
+'"I agree.":',
+'call cw_end',
+'"":',
+'call cw_end',
+'',
+'label cw_end:',
 'scene bg warning2',
 'return'
 }

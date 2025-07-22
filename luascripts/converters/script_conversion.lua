@@ -21,7 +21,6 @@ function RPY_TO_LUA(scriptnumber)
 
 outputfile = io.open("script_ch" .. scriptnumber .. ".lua","w")
 outputfile:write("--[[ converted DDLC script ]]\nscript_ch" .. scriptnumber .. " = {\n")
-outputfile:write("--[[ converted DDLC script ]]\nscript_ch" .. scriptnumber .. " = {\n")
 
 outputfile = io.open("script_ch" .. scriptnumber .. ".lua","a")
 
