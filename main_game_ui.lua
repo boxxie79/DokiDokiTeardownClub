@@ -29,6 +29,7 @@ function init()
 	playing_music = "t1"
 	s_name = "Sayori"
 	currentlabel = nil
+	skipping = false
 
   --[[if GetString("savegame.mod.MCNAME") ~= nil then
 		mc_name = GetString("savegame.mod.MCNAME")s
@@ -55,6 +56,8 @@ function init()
 
 	poem_dislike_threshold = 29
 	poem_like_threshold = 45
+
+	frame = 0
 
 	-- not poem game
 	background_image = "../gui/menu_bg.png"
@@ -107,10 +110,10 @@ end
 	names = {}
 	names["mc"] = GetString("savegame.mod.MCNAME")
  	names["monologue"] = "monologue"
-	names["s"] = "Sayori"
- 	names["m"] = "Monika"
-	names["n"] = "Natsuki"
- 	names["y"] = "Yuri"
+	names["s"] = "s_name"
+ 	names["m"] = "m_name"
+	names["n"] = "n_name"
+ 	names["y"] = "y_name"
 	names["ny"] = "Nat & Yuri"
 
 --  set up fonts
@@ -131,31 +134,41 @@ end
 	music["t8"] = "8" -- Daijoubu!
 
 	-- heavy shitcode
-	chr_positions = {}
-	chr_positions["sayori"] = 0
-	chr_positions["monika"] = 0
-	chr_positions["natsuki"] = 0
-	chr_positions["yuri"] = 0
+	get_show_value = {}
+	get_show_value["sayori"] = sayori_show
+	get_show_value["monika"] = monika_show 
+	get_show_value["natsuki"] = natsuki_show 
+	get_show_value["yuri"] = yuri_show 
 
 	-- expressions used in game
 	expressions = {}
-	expressions["s_name"] = "Sayori"
-	expressions["n_name"] = "Peak"
-	expressions["y_name"] = "Y???"
-	expressions["m_name"] = "XXXXXX"
+	expressions["s_name"] = "???"
+	expressions["n_name"] = "Girl 2"
+	expressions["y_name"] = "Girl 1"
+	expressions["m_name"] = "Girl 3"
 	expressions["nextscene"] = ""
 	expressions["poemwinner"] = nil
 	expressions["ch1_choice"] = nil
 
 	poemwinner = {}
 
+	choices = {}
+
 function PoemGameControl(control)
 	returncount = 0
 	if control == "start" then
+		skipping = false
 		in_novel = false
 		in_poem_game = true
 		wordspicked = 0
 		displaywords = PickPoemWords()
+		if expressions["ch1_choice"] == "sayori" then
+			sayori_point_total = sayori_point_total + 5
+		elseif expressions["ch1_choice"] == "natsuki" then
+			natsuki_point_total = natsuki_point_total + 5
+		else
+			yuri_point_total = yuri_point_total + 5
+		end 
 	elseif control == "end" then
 		in_poem_game = false
 		in_novel = true
@@ -179,6 +192,8 @@ function tick()
 	end
 	if InputPressed("F8") then
 		paused = not paused
+		frame = UiHeight()
+		pause_intent = "Settings"
 	end
 	if InputDown("esc") then
 		SetPaused(false)
@@ -216,6 +231,8 @@ function LoadGame()
 
 	LoadedChapter = GetInt("savegame.mod.chapter")
 	line = 0
+
+	returncount = 0
 	-- affection point_totals
 	sayori_point_total = GetInt("savegame.mod.sayori.point_total")
 	yuri_point_total = GetInt("savegame.mod.yuri.point_total")
@@ -303,6 +320,29 @@ function drawFullscreen(input)
 	end
 end
 
+function drawanimation(input)
+	UiPush()
+	frame = frame - 0.5
+	if frame < -UiHeight() then
+		frame = UiHeight()
+	end
+	UiTranslate(frame, frame)
+	if input then
+		DrawImage("MOD/DDLC/images.rpa/images/" .. input, 1320*2)
+		UiTranslate(-1200*2, 0)
+		DrawImage("MOD/DDLC/images.rpa/images/" .. input, 1320*2)
+		UiTranslate(0, -1200*2)
+		DrawImage("MOD/DDLC/images.rpa/images/" .. input, 1320*2)
+		UiTranslate(1200*2, 0)
+		DrawImage("MOD/DDLC/images.rpa/images/" .. input, 1320*2)
+		UiTranslate(1200*2, 0)
+		DrawImage("MOD/DDLC/images.rpa/images/" .. input, 1320*2)
+		UiTranslate(0, -1200*2)
+		DrawImage("MOD/DDLC/images.rpa/images/" .. input, 1320*2)
+	end
+	UiPop()
+end
+
 function RenderCompositeImage(image, alignment)
 	UiPush()
 	UiResetNavigation()
@@ -310,27 +350,36 @@ function RenderCompositeImage(image, alignment)
 	if alignment == "center" then
 		UiTranslate(UiWidth()/2, 0)
 		UiTranslate(-iw/2, 0)
+	elseif alignment == "left" then
+		UiTranslate(UiWidth()/2-UiWidth()/4, 0)
+		UiTranslate(-iw/2, 0)
+	elseif alignment == "right" then
+		UiTranslate(UiWidth()/2+UiWidth()/4, 0)
+		UiTranslate(-iw/2, 0)
 	else
 		UiTranslate(-480, 0)
 		UiTranslate(alignment, 0)
 	end
 	local key = 1
-	repeat
-		DrawImage("MOD/DDLC/images.rpa/images/" .. image[key], UiHeight())
-		key = key + 1
-	until image[key] == nil
+	for i,v in pairs(image) do
+		DrawImage("MOD/DDLC/images.rpa/images/" .. image[i], UiHeight())
+	end
 	UiPop()
 end
 
 function tableContains(table, key)
-  return table[key] ~= nil
+	if table[key] then
+		return true
+	else
+		return false
+	end
 end
 
 -- find in table
 function tableFind(find, table)
-	for i, v in table do
+	for i,v in pairs(table) do
 		if v == find then
-			return I
+			return i
 		else
 			return nil
 		end
@@ -362,16 +411,16 @@ function showcharacter(input)
 	DebugPrint(character .. " " .. pose)
 	if character == "sayori" or character == "s" then
 		sayori_show[1] = image_sayori[pose]
-		local character = "sayori"
+		character = "sayori"
 	elseif character == "monika" or character == "m" then
 		monika_show[1] = image_monika[pose]
-		local character = "monika"
+		character = "monika"
 	elseif character == "natsuki" or character == "n" then
 		natsuki_show[1] = image_natsuki[pose]
-		local character = "natsuki"
+		character = "natsuki"
 	elseif character == "yuri" or character == "y" then
 		yuri_show[1] = image_yuri[pose]
-		local character = "yuri"
+		character = "yuri"
 	elseif character == "bg" then
 		DebugPrint("WHAT")
 		background_image = image_bg[pose][1]
@@ -385,9 +434,6 @@ function showcharacter(input)
 	else
 		DebugPrint("Unknown character: " .. character)
 		local character = nil
-	end
-	if character then
-		table.insert(characters_on_screen, character)
 	end
 end
 
@@ -411,6 +457,8 @@ function interpretcommand(input)
 			return -- zorder not implemented yet
 		elseif command[3] == "behind" then
 			return -- behind not implemented yet
+		elseif command[3] == "at" then
+			return -- positioning not implemented yet
 		elseif string.find(command[2], "cg") then
 			if string.find(command[2], "exp") then 
 				cg_on_screen["exp"] = command[2]
@@ -419,8 +467,12 @@ function interpretcommand(input)
 				cg_on_screen["base"] = command[2]
 			end
 		else
-			DebugPrint(command[2] .. " " .. command[3])
+			DebugPrint(command[1] .. " " .. command[2] .. " " .. command[3])
 			showcharacter(command[2] .. " " .. command[3])
+			local character = command[2]
+			if not tableFind(character, characters_on_screen) then
+				table.insert(characters_on_screen, character)
+			end
 		end
 		elseif command[1] == "play" then
 		playing_music = music[command[3]]
@@ -441,16 +493,32 @@ function interpretcommand(input)
 	elseif command[1] == "hide" then
 		if command[2] == "sayori" then
 			sayori_show[1] = nil
-			--characters_on_screen[findintable("sayori", characters_on_screen)] = nil
+			for i = #characters_on_screen, 1, -1 do
+				if characters_on_screen[i] == command[2] then
+					table.remove(characters_on_screen, i)
+				end
+			end
 		elseif command[2] == "natsuki" then
 			natsuki_show[1] = nil
-			--characters_on_screen[findintable("natsuki", characters_on_screen)] = nil
+			for i = #characters_on_screen, 1, -1 do
+				if characters_on_screen[i] == command[2] then
+					table.remove(characters_on_screen, i)
+				end
+			end
 		elseif command[2] == "yuri" then
 			yuri_show[1] = nil
-			--characters_on_screen[findintable("yuri", characters_on_screen)] = nil
+			for i = #characters_on_screen, 1, -1 do
+				if characters_on_screen[i] == command[2] then
+					table.remove(characters_on_screen, i)
+				end
+			end
 		elseif command[2] == "monika" then
 			monika_show[1] = nil
-			--characters_on_screen[findintable("monika", characters_on_screen)] = nil
+			for i = #characters_on_screen, 1, -1 do
+				if characters_on_screen[i] == command[2] then
+					table.remove(characters_on_screen, i)
+				end
+			end
 		elseif string.find(command[2], "cg") then
 			if command[2] == cg_on_screen["exp"] then
 				cg_on_screen["exp"] = nil
@@ -579,12 +647,15 @@ function getspeaker()
 	end
 end
 
-
 -- Strip text for displaying to textbox
 function striptext(texttostrip)
+	if texttostrip then
 	--  replace [player] with mc name
 	--  texttostrip = string.sub(texttostrip, "[player]", mc_name)
-	local first_quote = string.find(texttostrip, '"')	
+	local first_quote = string.find(texttostrip, '"')
+	if not first_quote then
+		return texttostrip
+	end
 	local last_quote = string.find(texttostrip, '"', first_quote + 1)
 	if first_quote and last_quote then
 		local workingtext = string.sub(texttostrip, first_quote + 1, last_quote - 1)
@@ -599,6 +670,9 @@ function striptext(texttostrip)
 		return workingtext
 	end
 	return texttostrip
+	else	
+	return nil
+	end
 end
 
 function advancetext(argument)
@@ -610,7 +684,7 @@ function advancetext(argument)
   currenttext = chapters[LoadedChapter][line]--chapters["0"][line]
   local splittext = splitcommand(currenttext)
   if names[getspeaker()] ~= nil then
-    speakingcharacter = names[getspeaker()]
+    speakingcharacter = striptext(expressions[names[getspeaker()]])
 	if not string.find(splittext[1], '"') and not string.find (splittext[2], '"') then
 		showcharacter(splittext[1] .. " " .. splittext[2])
 		displaytext = '"' .. striptext(currenttext) .. '"'
@@ -644,9 +718,9 @@ UiPush()
 UiCenterH = UiHeight()/2
 UiCenterW = UiWidth()/2
 --	draw background
-drawFullscreen(background_image)
 if not InputDown("shift") then
 UiMakeInteractive()
+drawFullscreen(background_image)
 end
 
 
@@ -660,17 +734,29 @@ if in_novel == true then
 	UiPush()
 	UiResetNavigation()
 
-	if sayori_show[1] then
-		RenderCompositeImage(sayori_show[1], 100)
+	local position = {}
+
+	if #characters_on_screen == 1 then
+		position[1] = "center"
+	elseif #characters_on_screen == 2 then
+		position[1] = "center"
+		position[2] = "left"
+	elseif #characters_on_screen == 3 then
+		position[1] = "center"
+		position[2] = "left"
+		position[3] = "right"
 	end
-	if natsuki_show[1] then
-		RenderCompositeImage(natsuki_show[1], 600)
-	end
-	if yuri_show[1] then
-		RenderCompositeImage(yuri_show[1], 1100)
-	end
-	if monika_show[1] then
-		RenderCompositeImage(monika_show[1], 1600)
+	
+	if #characters_on_screen == 1 then
+		if characters_on_screen[1] == "sayori" then
+			RenderCompositeImage(sayori_show[1], position[1])
+		elseif characters_on_screen[1] == "natsuki" then
+			RenderCompositeImage(sayori_show[1], position[1])
+		elseif characters_on_screen[1] == "yuri" then
+			RenderCompositeImage(sayori_show[1], position[1])
+		elseif characters_on_screen[1] == "monika" then
+			RenderCompositeImage(sayori_show[1], position[1])
+		end
 	end
 
 	if in_cg then
@@ -689,16 +775,23 @@ if in_novel == true then
 		UiFont(fonts["name"], 50)
 		UiTextOutline(0.73, 0.33, 0.60, 1, 0.6)
 		UiTranslate(500,500)
-		for loop = 1,4 do
-			if choice_text[loop] then
-				if UiTextButton(striptext(choice_text[loop])) then
-					making_choice = false
-					interpretcommand(choice_command[loop])
-					choice_text = {}
-					choice_command = {}
+		if LoadedChapter == 1 and expressions["ch1_choice"] then
+			making_choice = false
+			interpretcommand(choice_command[loop])
+			choice_text = {}
+			choice_command = {}
+		else
+			for loop = 1,4 do
+				if choice_text[loop] then
+					if UiTextButton(striptext(choice_text[loop])) then
+						making_choice = false
+						interpretcommand(choice_command[loop])
+						choice_text = {}
+						choice_command = {}
+					end
 				end
-			end
 			UiTranslate(0,50)
+			end
 		end
 		UiPop()
 	end
@@ -748,6 +841,9 @@ if in_novel == true then
 	if InputReleased("space") and not paused and not making_choice then
 		advancetext()
 	end
+	if InputPressed("lmb") and mousex > 348 and mousex < 1574 and mousey > 844 and mousey < 1000 and not paused and not making_choice then
+		advancetext()
+	end
 
 	UiPop()
 	UiPush()
@@ -755,10 +851,24 @@ if in_novel == true then
 	UiTranslate(550,1040)
 	UiFont(fonts["speech"], 30)
 	if paused == false and GetBool("savegame.mod.seendisclaimer") then
-		if UiTextButton("Settings") then
-			paused = true
+		-- HISTORY SKIP AUTO SAVE LOAD SETTINGS
+		if UiTextButton("History") then
+			paused = not paused
+			frame = UiHeight()
+			pause_intent = "History"
 		end
-		UiTranslate(150)
+		UiTranslate(100)
+		if UiTextButton("Skip") then
+			skipping = not skipping
+		end
+		if skipping then
+			advancetext()
+		end
+		UiTranslate(100)
+		if UiTextButton("Auto") then
+			-- not implemented
+		end
+		UiTranslate(100)
 		if UiTextButton("Save") then
 			SaveGame()
 		end
@@ -766,21 +876,15 @@ if in_novel == true then
 		if UiTextButton("Load") then
 			LoadGame()
 		end
+		UiTranslate(100)
+		if UiTextButton("Settings") then
+			paused = not paused
+			frame = UiHeight()
+			pause_intent = "Settings"
+		end
 	end
 	UiPop()
 	--end
-
-	if paused then
-		UiPush()
-		drawFullscreen("../gui/overlay/game_menu.png")
-		UiResetNavigation()
-		UiFont(fonts["name"], 50)
-		UiTextOutline(0.73, 0.33, 0.60, 1, 0.6)
-		UiTranslate(50, 100)
-		UiText("Paused")
-		UiPop()
-	end
-
 	UiResetNavigation()
 
 	-- MORE DEBUG BUTTONS
@@ -872,6 +976,8 @@ elseif in_menu == true then
 	end
 	UiPop()]]
 end
+
+
 -- DEBUGGING UI
 
 if DebugUI then
@@ -908,6 +1014,17 @@ if DebugUI then
 		UiText("nextscene="..expressions["nextscene"], true)
 	end
 
+	UiText(characters_on_screen[1], true)
+	UiText(characters_on_screen[2], true)
+	UiText(characters_on_screen[3], true)
+	UiText(characters_on_screen[4], true)
+	UiPush()
+	UiTextOutline(1, 0, 0, 1, 0.6)
+	UiText(characters_on_screen[5], true)
+	UiText(characters_on_screen[6], true)
+	UiText(characters_on_screen[7], true)
+	UiText(characters_on_screen[8], true)
+	UiPop()
 	if InputDown("uparrow") and in_novel and not making_choice then
 		advancetext()
 	elseif InputPressed("downarrow") and in_novel and not making_choice then
@@ -917,6 +1034,8 @@ if DebugUI then
 		advancetext()
 	end
 	UiPop()
+
+
 	-- print savedata
 	UiPush()
 	UiResetNavigation()
@@ -943,6 +1062,7 @@ if DebugUI then
 		init()
 	end
 	UiPop()
+	UiPush()
 	local displaymousex, displaymousey = 0
 	mousex, mousey = UiGetMousePos()
 	if mousey > 650 and mousex > 300 and mousex < 1630 and in_novel then
@@ -961,9 +1081,28 @@ if DebugUI then
 	end
 	UiTranslate(displaymousex-50, displaymousey+100)
 	UiText("X"..math.floor(mousex).. "\nY" .. math.floor(mousey))
+	UiPop()
 else
 	DebugPrint("")
 end
+
+if paused then
+	drawanimation("../gui/menu_bg.png")
+	drawFullscreen("../gui/overlay/main_menu.png")
+	UiFont(fonts["name"], 50)
+	UiTextOutline(0.73, 0.33, 0.60, 1, 0.6)
+	UiPush()
+	UiTranslate(50, 100)
+	UiResetNavigation()
+	UiText("Paused")
+	UiTranslate(0, 50)
+	UiText(pause_intent)
+	if pause_intent == "history" then end
+
+	UiPop()
+end
+
+
 
 -- end of draw function
 end
